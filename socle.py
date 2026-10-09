@@ -55,7 +55,7 @@ class Pixels:
 
 def ouvrir_image(image_test=True):
     if image_test:
-        chemin = "C:/Users/Matteo/Documents/ArchLate/archives/image_test.jpg"
+        chemin = "archives/image_test.jpg"
     else:
         type_fichiers = [("Images", "*.png *.jpg *.jpeg"), ("Tous les fichiers", "*.*")]
         chemin = filedialog.askopenfilename(title="Quel Image ?", filetypes=type_fichiers)
