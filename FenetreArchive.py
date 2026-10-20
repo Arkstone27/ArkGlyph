@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QLabel, QGraphicsScene, QGraphicsView
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QWheelEvent
+from PySide6.QtCore import Qt
 
 class FenetreArchive(QWidget):
     def __init__(self, parent=None):
@@ -27,5 +28,16 @@ class OngletLot(QGraphicsView):
         self.scene.addPixmap(QPixmap("archives/image_test.jpg"))
 
         self.setScene(self.scene)
+        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        self.afficher_page_entiere()
 
-        print(self.alignment())
+    def afficher_page_entiere(self):
+        rectangle = self.scene.itemsBoundingRect() # Recupere le rectangle englobant tous les elements (le plus gros etant la page)
+
+        if not rectangle.isNull():
+            self.fitInView(rectangle, Qt.AspectRatioMode.KeepAspectRatio) # Conserve le ratio de la page
+
+    def wheelEvent(self, event: QWheelEvent) -> None: # On réécrit les choses à faire avec la molette
+         facteur_zoom = 1.15
+
+        
