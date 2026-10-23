@@ -1,10 +1,11 @@
 from PySide6.QtWidgets import (
-    QWidget, QTabWidget, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsScene, QGraphicsView, QPushButton, QSpinBox, QTabBar, QComboBox)
+    QWidget, QTabWidget, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsScene, QGraphicsView, QPushButton, QSpinBox, QTabBar, QComboBox, QLineEdit)
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
 from time import time
 from Lot import Lot, get_lots_saved
+from download_lot import is_valide, download_lot
 
 class FenetreArchive(QWidget):
     def __init__(self, parent=None):
@@ -133,12 +134,14 @@ class OngletAjoutLot(QWidget):
         self.disposition_v = QVBoxLayout(self)
         self.disposition_v.addStretch(1)
 
-        self.disposition_v.addWidget(QLabel("Sélectionnez le lot à charger", self))
-
+        self.disposition_v.addWidget(QLabel("icone-ouverture", self))
         self.disposition_v.addWidget(QLabel("Lots sauvegardés localement :", self))
         self.disposition_v.addWidget(self.combobox_lots)
-
         self.disposition_v.addWidget(self.btn_charger)
+
+        self.disposition_v.addWidget(QLabel("Télécharger un lot :", self))
+        self.disposition_v.addWidget(WidgetDownload(self))
+
         self.disposition_v.addStretch(1)
 
         self.disposition_h.addLayout(self.disposition_v)
@@ -150,3 +153,16 @@ class OngletAjoutLot(QWidget):
 
     def charger_lot(self):
         self.parent.ajout_lot(self.combobox_lots.currentIndex())
+
+class WidgetDownload(QWidget):
+    def __init__(self, parent=None):
+        super().__init__()
+
+        # Widgets
+        self.line_edit = QLineEdit(parent=self, placeholderText="url")
+        self.btn_download = QPushButton("icone-télécharger", self)
+
+        # Disposition
+        self.disposition = QHBoxLayout(self)
+        self.disposition.addWidget(self.line_edit)
+        self.disposition.addWidget(self.btn_download)

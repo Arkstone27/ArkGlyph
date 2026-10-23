@@ -1,7 +1,16 @@
-from playwright.sync_api import sync_playwright, expect
+from tkinter.ttk import Treeview
 
-import time
+from playwright.sync_api import sync_playwright
+import requests
+
 from pathlib import Path
+
+def is_valide(url: str):
+    try:
+        reponse = requests.head(url, timeout=5, allow_redirects=True)
+        return 200 <= reponse.status_code < 300
+    except requests.RequestException:
+        return False
 
 def appuie_bouton(xpath_bouton: str, page):
     prefixe_xpath = 'xpath='
@@ -12,6 +21,9 @@ def appuie_bouton(xpath_bouton: str, page):
     locator.click()
 
 def download_lot(url_lot: str):
+    if not is_valide(url_lot):
+        return False, f"L'url : {url_lot} n'est pas valide ou n'existe pas"
+
     try:
         existant, nom_lot = ouverture_navigateur(url_lot)
 
@@ -24,7 +36,7 @@ def download_lot(url_lot: str):
 def ouverture_navigateur(url_lot: str):
 
     with sync_playwright() as playwright:
-        with playwright.firefox.launch(headless=True) as navigateur:
+        with playwright.firefox.launch(headless=False) as navigateur:
             contexte = navigateur.new_context()
             page = contexte.new_page()
             print("Ouverture de la page...")
@@ -91,6 +103,6 @@ def save_img(page_visio, chemin_lot, n_page):
         info_img.value.save_as(chemin_fichier.resolve())
 
 if __name__ == '__main__':
-    url = "https://archives.calvados.fr/ark:/52329/9pvkd4trh8xj"
-
+    url = "https://archives.calvados.fr/ark:/52329/2637kfglmnz5"
+    print(is_valide(url))
     print(download_lot(url)[1])
