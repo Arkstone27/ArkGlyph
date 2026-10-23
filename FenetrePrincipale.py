@@ -1,10 +1,10 @@
 from PySide6.QtWidgets import QApplication, QMainWindow
+
 from PySide6.QtGui import QPalette, QColor
 
 import sys
 
 from FenetreArchive import FenetreArchive
-
 
 class FenetrePrincipal(QMainWindow):
     def __init__(self):
