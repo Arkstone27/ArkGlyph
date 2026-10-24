@@ -11,9 +11,6 @@ class FenetreArchive(QWidget):
     def __init__(self, parent=None):
         super().__init__()
 
-        # Gestion des Lots
-        self.chemins_lots, self.noms_lots = get_lots_saved()
-
         # Widgets
         self.tabs = QTabWidget(self, tabsClosable=True)
         self.onglets_lots = dict()
@@ -25,6 +22,9 @@ class FenetreArchive(QWidget):
         # Disposition
         self.disposition = QVBoxLayout(self)
         self.disposition.addWidget(self.tabs)
+
+        # Gestion des Lots
+        self.update_lots()
 
     def ajout_lot(self, indice_lot):
         if len(self.chemins_lots) == 0:
@@ -41,6 +41,10 @@ class FenetreArchive(QWidget):
         self.onglets_lots[lot.nom] = onglet_lot
         self.tabs.insertTab(self.tabs.count() - 1, onglet_lot, lot.nom)
         self.tabs.setCurrentIndex(self.tabs.count() - 2)
+
+    def update_lots(self):
+        self.chemins_lots, self.noms_lots = get_lots_saved()
+        self.onglet_ajout.update_lots(self.noms_lots)
 
 class OngletLot(QGraphicsView):
     def __init__(self, lot, indice_position, parent=None):
@@ -123,7 +127,6 @@ class OngletAjoutLot(QWidget):
 
         # Widgets
         self.combobox_lots = QComboBox()
-        self.update_lots(self.parent.noms_lots)
         self.btn_charger = QPushButton("Charger le lot")
         self.btn_charger.clicked.connect(self.charger_lot)
 
@@ -157,6 +160,7 @@ class OngletAjoutLot(QWidget):
 class WidgetDownload(QWidget):
     def __init__(self, parent=None):
         super().__init__()
+        self.parent = parent 
 
         # Widgets
         self.line_edit = QLineEdit(parent=self, placeholderText="url")
@@ -169,4 +173,8 @@ class WidgetDownload(QWidget):
         self.disposition.addWidget(self.btn_download)
 
     def download_url(self):
-        print(download_lot(self.line_edit.text()))
+        reussite, message = download_lot(self.line_edit.text())
+        print(message)
+
+        if reussite:
+            self.parent.parent.update_lots()

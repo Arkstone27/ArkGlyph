@@ -1,5 +1,3 @@
-from tkinter.ttk import Treeview
-
 from playwright.sync_api import sync_playwright
 import requests
 
@@ -28,7 +26,7 @@ def download_lot(url_lot: str):
         existant, nom_lot = ouverture_navigateur(url_lot)
 
     except Exception as e:
-        return False, f"Erreur pendant le téléchargement du lot : '{nom_lot}' \n {e}"
+        return False, f"Erreur pendant le téléchargement du lot : \n {e}"
     if existant:
         return False, f"Le lot : '{nom_lot}' existe déjà : \n {url_lot=}"
     return True, f"Téléchargement reussie du lot : '{nom_lot}'"
@@ -100,6 +98,15 @@ def save_img(page_visio, chemin_lot, n_page):
         chemin_fichier = (chemin_lot / f"{n_page}.jpg")
 
         info_img.value.save_as(chemin_fichier.resolve())
+
+def creation_dossier_lots():
+    chemin_lots = Path("Lots_ArchLate")
+
+    if chemin_lots.is_dir() :
+        return
+    chemin_lots.mkdir()
+
+creation_dossier_lots()
 
 if __name__ == '__main__':
     url = "https://archives.calvados.fr/ark:/52329/2637kfglmnz5"
