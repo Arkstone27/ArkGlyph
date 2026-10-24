@@ -22,16 +22,16 @@ def appuie_bouton(xpath_bouton: str, page):
 
 def download_lot(url_lot: str):
     if not is_valide(url_lot):
-        return False, f"L'url : {url_lot} n'est pas valide ou n'existe pas"
+        return False, f"L'url : '{url_lot}' n'est pas valide ou n'existe pas"
 
     try:
         existant, nom_lot = ouverture_navigateur(url_lot)
 
     except Exception as e:
-        return False, f"Erreur pendant le téléchargement du lot : {nom_lot} \n {e}"
+        return False, f"Erreur pendant le téléchargement du lot : '{nom_lot}' \n {e}"
     if existant:
-        return False, f"Le lot : {nom_lot} existe déjà : \n {url=}"
-    return True, f"Téléchargement reussie du lot : {nom_lot}"
+        return False, f"Le lot : '{nom_lot}' existe déjà : \n {url_lot=}"
+    return True, f"Téléchargement reussie du lot : '{nom_lot}'"
 
 def ouverture_navigateur(url_lot: str):
 
@@ -39,9 +39,8 @@ def ouverture_navigateur(url_lot: str):
         with playwright.firefox.launch(headless=False) as navigateur:
             contexte = navigateur.new_context()
             page = contexte.new_page()
-            print("Ouverture de la page...")
+            print("Ouverture de la page... ")
             page.goto(url_lot, wait_until='load')
-
             page_visio = ouvre_visionneuse(page, contexte)
 
             nb_pages, nom_lot = preparation_page(page_visio)

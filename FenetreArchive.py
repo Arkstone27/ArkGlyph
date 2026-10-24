@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt
 
 from time import time
 from Lot import Lot, get_lots_saved
-from download_lot import is_valide, download_lot
+from download_lot import download_lot
 
 class FenetreArchive(QWidget):
     def __init__(self, parent=None):
@@ -161,8 +161,12 @@ class WidgetDownload(QWidget):
         # Widgets
         self.line_edit = QLineEdit(parent=self, placeholderText="url")
         self.btn_download = QPushButton("icone-télécharger", self)
+        self.btn_download.clicked.connect(self.download_url)
 
         # Disposition
         self.disposition = QHBoxLayout(self)
         self.disposition.addWidget(self.line_edit)
         self.disposition.addWidget(self.btn_download)
+
+    def download_url(self):
+        print(download_lot(self.line_edit.text()))
