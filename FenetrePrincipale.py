@@ -19,8 +19,15 @@ class FenetrePrincipal(QMainWindow):
         self.menu_bar = self.menuBar()
         self.menu_fichier = self.menu_bar.addMenu("Fichier")
 
+
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+
+    # Style
+    with open("style.qss", "r") as f:
+        _style = f.read()
+        app.setStyleSheet(_style)
 
     fenetre_principal = FenetrePrincipal()
     fenetre_principal.show()

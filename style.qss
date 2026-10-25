@@ -1,0 +1,36 @@
+QMainWindow {
+    background-color : #0D0D0D;
+}
+
+QTabWidget, QTabWidget::pane {
+    background-color  : #151515;
+    border : 5px solid #A58CF4;
+    top : -1px;
+}
+QTabWidget::pane {
+  border: 1px solid #A58CF4;
+  top:-1px; 
+  background: #151515;; 
+} 
+
+QTabBar::tab {
+  background: #151515; 
+  border: 1px solid #A58CF4; 
+  padding: 15px;
+} 
+
+QTabBar::tab:selected { 
+  background: #151515; 
+  margin-bottom: -1px; 
+}
+
+QWidget {
+    background-color : #0D0D0D;
+    color : #FAFAFA;
+}
+
+QFrame#OngletAjoutLot, QFrame#OngletAjoutLot *{
+    background-color : #151515;
+    font-size : 25px;
+
+}

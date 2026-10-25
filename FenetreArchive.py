@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (
-    QWidget, QTabWidget, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsScene, QGraphicsView, QPushButton, QSpinBox, QTabBar, QComboBox, QLineEdit)
+    QWidget, QTabWidget, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsScene, QGraphicsView, QPushButton, QSpinBox, QTabBar, QComboBox, QLineEdit, QFrame)
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
@@ -120,10 +120,11 @@ class SpinBoxPages(QSpinBox):
         self.setSuffix(f"/{lot.nb_pages}")
         self.setRange(1, lot.nb_pages)
 
-class OngletAjoutLot(QWidget):
+class OngletAjoutLot(QFrame):
     def __init__(self, parent: FenetreArchive):
         super().__init__()
         self.parent = parent
+        self.setObjectName("OngletAjoutLot")
 
         # Widgets
         self.combobox_lots = QComboBox()
