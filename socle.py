@@ -2,7 +2,8 @@ from time import perf_counter
 import plotly.express as px
 
 from PIL import Image
-from tkinter import filedialog
+from PySide6.QtWidgets import QFileDialog, QApplication
+import sys
 
 import math
 import numpy as np
@@ -51,14 +52,15 @@ class Pixels:
         return Pixels(new_data, self.mode_couleur)
 
     def show(self):
-        self.conversion_img().show()
+        fig = px.imshow(self.conversion_img(), color_continuous_scale='gray')
+        fig.show()
 
 def ouvrir_image(image_test=True):
     if image_test:
         chemin = "archives/image_test.jpg"
     else:
-        type_fichiers = [("Images", "*.png *.jpg *.jpeg"), ("Tous les fichiers", "*.*")]
-        chemin = filedialog.askopenfilename(title="Quel Image ?", filetypes=type_fichiers)
+        app = QApplication(sys.argv)
+        chemin = QFileDialog.getOpenFileName(None, "Selectionner une image", "", "Images (*.png *.jpg *.jpeg)")[0]
 
     img = Image.open(chemin)
 
@@ -129,5 +131,5 @@ if __name__ == '__main__':
     facteur = 6
     afficher_fonction(lambda x: math.exp((-x*x)/(facteur*2))/((2*math.pi)**0.5*facteur))
 
-    pixels = ouvrir_image()
+    pixels = ouvrir_image(False)
     pixels.show()
