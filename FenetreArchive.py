@@ -1,30 +1,40 @@
 from PySide6.QtWidgets import (
-    QWidget, QTabWidget, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsScene, QGraphicsView, QPushButton, QSpinBox, QTabBar, QComboBox, QLineEdit, QFrame)
-from PySide6.QtGui import QPixmap
-from PySide6.QtCore import Qt
+    QWidget, QTabWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QGraphicsScene, QGraphicsView, QPushButton, QSpinBox, QTabBar,
+    QComboBox, QLineEdit, QFrame, QMessageBox, QGraphicsPathItem, QMenu)
+from PySide6.QtGui import QPixmap, QPainterPath, QPen, QBrush, QColor, QPainter
+from PySide6.QtCore import Qt, QRectF, QPointF
 
 from time import time
-from Lot import Lot, get_lots_saved
-from download_lot import download_lot
 
-class FenetreArchive(QWidget):
+from DockProgress import gestion_processus
+
+from Lot import Lot, get_lots_saved
+from load_icones import SvgWidget, icone_cross
+
+class FenetreArchive(QFrame):
     def __init__(self, parent=None):
         super().__init__()
+        self.setObjectName("FenetreArchive")
 
         # Widgets
         self.tabs = QTabWidget(self, tabsClosable=True)
         self.onglets_lots = dict()
 
         self.onglet_ajout = OngletAjoutLot(self)
-        self.tabs.addTab(self.onglet_ajout, "+")
+        self.tabs.addTab(self.onglet_ajout, " + ")
         self.tabs.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None) # Retire la croix de fermeture
 
         # Disposition
         self.disposition = QVBoxLayout(self)
         self.disposition.addWidget(self.tabs)
+        self.layout().setContentsMargins(0, 0, 0, 0)
 
         # Gestion des Lots
         self.update_lots()
+
+        # Indices de progressions
+        self.indice_download = 0
 
     def ajout_lot(self, indice_lot):
         if len(self.chemins_lots) == 0:
@@ -46,10 +56,21 @@ class FenetreArchive(QWidget):
         self.chemins_lots, self.noms_lots = get_lots_saved()
         self.onglet_ajout.update_lots(self.noms_lots)
 
+    def fin_download(self, reussite: bool, message: str):
+        print(message)
+        if reussite:
+            self.update_lots()
+            QMessageBox.information(self, "Opération reussie", message)
+        else:
+            QMessageBox.warning(self, "Echec du download !", message)
+        self.onglet_ajout.wigdet_download.btn_download.setEnabled(True)
+
 class OngletLot(QGraphicsView):
     def __init__(self, lot, indice_position, parent=None):
         super().__init__()
+
         self.setTransformationAnchor(self.ViewportAnchor.AnchorUnderMouse)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.indice_position = indice_position
 
         # Lot
@@ -60,6 +81,8 @@ class OngletLot(QGraphicsView):
         self.scene = QGraphicsScene()
 
         self.page = QPixmap(self.lot.chemins_pages[self.indice_page].resolve())
+        self.w, self.h = self.page.size().width(), self.page.size().height()
+
         self.page_item = self.scene.addPixmap(self.page)
         self.changer_page(self.indice_page)
 
@@ -69,6 +92,13 @@ class OngletLot(QGraphicsView):
 
         self.taille_max = self.transform().m11()
         self.last_zoom = time()
+
+        # Initialisation des dessins des zones de textes
+        self.point_depart = None
+        self.point_fin = None
+        self.rectangle_actuel = None
+
+        self.zones_textes = list()
 
         # SpinBox
         self.spin_box = SpinBoxPages(self.lot, parent=self)
@@ -85,8 +115,19 @@ class OngletLot(QGraphicsView):
 
         self.disposition_v.addLayout(self.disposition_h)
 
+        # Menu déroulant
+        self.menu_deroulant = QMenu(self)
+        action_dupliquer = self.menu_deroulant.addAction("Dupliquer")
+        action_dupliquer.triggered.connect(self.duplication_zone_texte)
+
+        action_supprimer = self.menu_deroulant.addAction("Supprimer")
+        action_supprimer.triggered.connect(self.remove_zone_texte)
+
+        self.menu_deroulant.addSeparator()
+        action_type = self.menu_deroulant.addAction("Choisir le type   ")
+
     def afficher_page_entiere(self):
-        rectangle = self.scene.itemsBoundingRect() # Recupere le rectangle englobant tous les elements (le plus gros etant la page)
+        rectangle = self.scene.itemsBoundingRect()# Recupere le rectangle englobant tous les elements (le plus gros etant la page)
 
         if not rectangle.isNull():
             self.fitInView(rectangle, Qt.AspectRatioMode.KeepAspectRatio) # Conserve le ratio de la page
@@ -95,10 +136,14 @@ class OngletLot(QGraphicsView):
 
     def changer_page(self, new_indice: int):
         self.indice_page = new_indice
-        self.page = QPixmap(self.lot.chemins_pages[self.indice_page].resolve())
+        self.page = QPixmap(self.lot.chemins_pages[self.indice_page])
 
         self.page_item.setPixmap(self.page)
 
+        if self.page.width() > self.w or self.page.height() > self.h:
+            self.afficher_page_entiere()
+
+        self.w, self.h = self.scene.width(), self.scene.height()
     def resizeEvent(self, event):
         if (time() - self.last_zoom) > 0.1:
             self.afficher_page_entiere()
@@ -111,14 +156,142 @@ class OngletLot(QGraphicsView):
             self.scale(facteur_zoom, facteur_zoom)
         elif self.transform().m11() > self.taille_max*facteur_zoom:
             self.scale(1/facteur_zoom, 1/facteur_zoom)
+        super().wheelEvent(event)
+
+    def contextMenuEvent(self, event):
+        if self.scene.selectedItems():
+            self.menu_deroulant.exec(event.globalPos())
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.RightButton:
+            self.point_depart = self.mapToScene(event.position().toPoint()) # Convertit les coos de la fenêtre en coos de la scène
+            self.rectangle_actuel = None
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self.point_depart and (event.buttons() &  Qt.MouseButton.RightButton):
+            point_actuel = self.mapToScene(event.position().toPoint())
+            x, y = point_actuel.x(), point_actuel.y()
+
+            if 0 <= x <= self.w and 0 <= y <= self.h:
+                rectangle = QRectF(self.point_depart, point_actuel).normalized()
+
+                path = QPainterPath()
+                path.addRoundedRect(rectangle, 15, 15) # arrondi de 15px
+
+                if self.rectangle_actuel is None:
+                    self.rectangle_actuel = ZoneTexteItem(path, self.scene)
+                    self.rectangle_actuel.setPen(QPen(QColor(67, 48, 117), 2)) # épaisseur de 2px
+                    self.rectangle_actuel.setBrush(QBrush(QColor(67, 48, 117, 150)))
+
+                    self.scene.addItem(self.rectangle_actuel)
+
+                else:
+                    self.rectangle_actuel.setPath(path) # Mise à jour
+
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.RightButton and self.rectangle_actuel:
+            brush = QBrush(QColor(67, 48, 117, 100))
+            self.rectangle_actuel.setBrush(brush)
+
+            self.zones_textes.append(ZoneTexte(self.rectangle_actuel))
+
+        super().mouseReleaseEvent(event)
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
+            self.remove_zone_texte()
+        elif event.key() == Qt.Key.Key_D:
+            self.duplication_zone_texte()
+
+        super().keyPressEvent(event)
+
+    def remove_zone_texte(self):
+        new_zones = list()
+        for zone_texte in self.zones_textes:
+            if zone_texte.scene_rectangle.isSelected():
+                # print(zone_texte.scene_rectangle.path().boundingRect())
+                self.scene.removeItem(zone_texte.scene_rectangle)
+                del zone_texte
+            else:
+                new_zones.append(zone_texte)
+        self.zones_textes = new_zones
+
+    def duplication_zone_texte(self):
+        for zone_texte in self.zones_textes:
+            if zone_texte.scene_rectangle.isSelected():
+                self.zones_textes.append(zone_texte.copy())
+                self.scene.addItem(self.zones_textes[-1].scene_rectangle)
+
 
 class SpinBoxPages(QSpinBox):
     def __init__(self, lot: Lot, parent=None):
         super().__init__()
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Widget
         self.setSuffix(f"/{lot.nb_pages}")
         self.setRange(1, lot.nb_pages)
+
+class FullView(QGraphicsView):
+    def __init__(self, parent=None):
+        super().__init__()
+        # A faire
+
+class ZoneTexteItem(QGraphicsPathItem):
+    def __init__(self, path, scene, parent=None):
+        super().__init__(path, parent)
+
+        self.w_scene = 0
+        self.h_scene = 0
+        self.scene = scene
+        self.get_max_scene()
+
+        self.setFlag(QGraphicsPathItem.GraphicsItemFlag.ItemIsMovable, True)
+        self.setFlag(QGraphicsPathItem.GraphicsItemFlag.ItemIsSelectable, True)
+        self.setFlag(QGraphicsPathItem.GraphicsItemFlag.ItemSendsGeometryChanges, True)
+
+    def itemChange(self, change, value):
+
+        if change == QGraphicsPathItem.GraphicsItemChange.ItemPositionChange:
+            self.get_max_scene()
+            rectangle_forme = self.path().boundingRect()
+            rectangle_scene = rectangle_forme.translated(value)
+
+            if (rectangle_scene.left() < 0 or rectangle_scene.right() > self.w_scene
+                    or rectangle_scene.top() < 0 or rectangle_scene.bottom() > self.h_scene):
+                return self.pos()
+        return super().itemChange(change, value)
+
+    def get_max_scene(self):
+        self.w_scene = self.scene.width()
+        self.h_scene = self.scene.height()
+
+    def copy(self):
+        new_zone = ZoneTexteItem(self.path(), self.scene)
+
+        new_zone.setPen(self.pen())
+        new_zone.setBrush(self.brush())
+
+        new_zone.setTransform(self.transform())
+        new_zone.setRotation(self.rotation())
+        new_zone.setScale(self.scale())
+
+        new_zone.setPos(self.pos() + QPointF(10,10))
+
+        return new_zone
+
+class ZoneTexte:
+    def __init__(self, scene_rectangle):
+        self.scene_rectangle = scene_rectangle
+        self.lien_tableau = None
+
+    def copy(self):
+        new_zone = ZoneTexte(self.scene_rectangle.copy())
+        new_zone.lien_tableau = self.lien_tableau
+        return new_zone
 
 class OngletAjoutLot(QFrame):
     def __init__(self, parent: FenetreArchive):
@@ -128,25 +301,29 @@ class OngletAjoutLot(QFrame):
 
         # Widgets
         self.combobox_lots = QComboBox()
+        self.combobox_lots.currentTextChanged.connect(self.combobox_lots.setToolTip)
+
         self.btn_charger = QPushButton("Charger le lot")
         self.btn_charger.clicked.connect(self.charger_lot)
+        self.wigdet_download = WidgetDownload(self)
 
         # Disposition
         self.disposition_h = QHBoxLayout(self)
         self.disposition_h.addStretch(1)
 
         self.disposition_v = QVBoxLayout(self)
+        self.disposition_v.setSpacing(10)
         self.disposition_v.addStretch(1)
 
-        self.disposition_v.addWidget(QLabel("icone-ouverture", self))
+        self.disposition_v.addWidget(SvgWidget("icones/open.svg", 100), alignment=Qt.AlignmentFlag.AlignCenter)
         self.disposition_v.addWidget(QLabel("Lots sauvegardés localement :", self))
         self.disposition_v.addWidget(self.combobox_lots)
         self.disposition_v.addWidget(self.btn_charger)
 
         self.disposition_v.addWidget(QLabel("Télécharger un lot :", self))
-        self.disposition_v.addWidget(WidgetDownload(self))
+        self.disposition_v.addWidget(self.wigdet_download)
 
-        self.disposition_v.addStretch(1)
+        self.disposition_v.addStretch(2)
 
         self.disposition_h.addLayout(self.disposition_v)
         self.disposition_h.addStretch(1)
@@ -165,7 +342,13 @@ class WidgetDownload(QWidget):
 
         # Widgets
         self.line_edit = QLineEdit(parent=self, placeholderText="url")
-        self.btn_download = QPushButton("icone-télécharger", self)
+        self.line_edit.textChanged.connect(self.line_edit.setToolTip)
+
+        self.btn_download = QPushButton("", self)
+        self.btn_download.setIcon(icone_cross)
+        self.btn_download.setObjectName("Download")
+
+
         self.btn_download.clicked.connect(self.download_url)
 
         # Disposition
@@ -174,8 +357,7 @@ class WidgetDownload(QWidget):
         self.disposition.addWidget(self.btn_download)
 
     def download_url(self):
-        reussite, message = download_lot(self.line_edit.text())
-        print(message)
+        self.btn_download.setEnabled(False)
+        print("-"*50)
+        gestion_processus.download_lot(self.line_edit.text())
 
-        if reussite:
-            self.parent.parent.update_lots()

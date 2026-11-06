@@ -2,6 +2,7 @@ from playwright.sync_api import sync_playwright
 import requests
 
 from pathlib import Path
+from Lot import creation_json
 
 def is_valide(url: str):
     try:
@@ -18,41 +19,52 @@ def appuie_bouton(xpath_bouton: str, page):
 
     locator.click()
 
-def download_lot(url_lot: str):
+def download_lot(url_lot: str, signaux):
     if not is_valide(url_lot):
-        return False, f"L'url : '{url_lot}' n'est pas valide ou n'existe pas"
-
+        signaux.fin.emit(False, f"L'url : '{url_lot}' n'est pas valide ou n'existe pas")
+        return
     try:
-        existant, nom_lot = ouverture_navigateur(url_lot)
+        existant, nom_lot = ouverture_navigateur(url_lot, signaux)
 
     except Exception as e:
-        return False, f"Erreur pendant le téléchargement du lot : \n {e}"
+        signaux.fin.emit(False, f"Erreur pendant le téléchargement du lot : \n {e}")
+        return
     if existant:
-        return False, f"Le lot : '{nom_lot}' existe déjà : \n {url_lot=}"
-    return True, f"Téléchargement reussie du lot : '{nom_lot}'"
+        signaux.fin.emit(False, f"Le lot : '{nom_lot}' existe déjà : \n {url_lot=}")
+    else:
+        signaux.fin.emit(True, f"Téléchargement reussie du lot : '{nom_lot}'")
 
-def ouverture_navigateur(url_lot: str):
+def ouverture_navigateur(url_lot: str, signaux):
 
     with sync_playwright() as playwright:
-        with playwright.firefox.launch(headless=False) as navigateur:
+        with playwright.firefox.launch(headless=True) as navigateur:
             contexte = navigateur.new_context()
             page = contexte.new_page()
-            print("Ouverture de la page... ")
+
+            signaux.status.emit("Ouverture de la page... ", 0)
             page.goto(url_lot, wait_until='load')
-            page_visio = ouvre_visionneuse(page, contexte)
+
+            signaux.status.emit("Ouverture de la visionneuse...", 0)
+            if page.content()[27] == "c":
+                page_visio = ouvre_visionneuse(page, contexte)
+            else:
+                page_visio = page
 
             nb_pages, nom_lot = preparation_page(page_visio)
-            existant, chemin_lot = creer_dossier(nom_lot)
+            existant, chemin_lot = creer_dossier(nom_lot, signaux)
             if existant:
                 return True, nom_lot
-            print("Téléchargement de la page 1...")
+
+            signaux.status.emit(f"Téléchargement de la page 1/{nb_pages}...", 0)
             save_img(page_visio, chemin_lot, 1)
             for n_page in range(2, nb_pages+1):
                 appuie_bouton("//button[@title='Suivant' and not(contains(@class, 'disabled'))]", page_visio)
-                print(f"Téléchargement de la page {n_page}...")
+                signaux.status.emit(f"Téléchargement de la page {n_page}/{nb_pages}...", 0)
                 save_img(page_visio, chemin_lot, n_page)
             page_visio.close()
             page.close()
+
+            creation_json(chemin_lot, url_lot)
     return False, nom_lot
 
 def ouvre_visionneuse(page, contexte):
@@ -61,7 +73,6 @@ def ouvre_visionneuse(page, contexte):
         lien_visionneuse.wait_for(state="visible", timeout=10000)
         lien_visionneuse.click()
     page_visio = page_visio_info.value
-    print("Ouverture de la visionneuse...")
     page_visio.wait_for_load_state()
 
     return page_visio
@@ -82,12 +93,12 @@ def preparation_page(page_visio):
 
     return nb_pages, nom_lot
 
-def creer_dossier(nom_lot):
-    nom_dossier = nom_lot.replace("/", "~")
+def creer_dossier(nom_lot, signaux):
+    nom_dossier = nom_lot.replace("/", "~").replace(":", "#")
     chemin_lot = Path("Lots_ArchLate") / nom_dossier
     if chemin_lot.is_dir():
         return True, ""
-    print(f"Création du dossier : {nom_dossier}...")
+    signaux.status.emit(f"Création du dossier : {nom_dossier}...", 0)
     chemin_lot.mkdir()
 
     return False, chemin_lot
@@ -110,5 +121,5 @@ creation_dossier_lots()
 
 if __name__ == '__main__':
     url = "https://archives.calvados.fr/ark:/52329/2637kfglmnz5"
+    # url = "https://archives.calvados.fr/ark:/52329/7mjpxsw1b3vc/9be33799-7f59-4169-b614-9f2f9c91cf53"
     print(is_valide(url))
-    print(download_lot(url)[1])
