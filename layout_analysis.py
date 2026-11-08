@@ -1,38 +1,26 @@
-from socle import *
+from ArkMage.image import ouvrir_image, Pixels
+from ArkMage.commun import conversion_gris
+
 import plotly.graph_objects as go
 
-from numba import njit
+from numba import njit, prange
 import numpy as np
 
-@njit
-def teinte_gris(couleur):
-    return couleur[0]*0.299 + couleur[1]*0.587 + couleur[2]*0.114
-
-def conversion_gris(pixels):
-    pixels_gris = pixels.appliquer(teinte_gris)
-    pixels_gris.data = pixels_gris.data[:,:,0].astype(np.uint8)
-    pixels_gris.mode_couleur = "L"
-
-    return pixels_gris
-
-@njit
+@njit(parallel=True)
 def histogramme_vertical_fast(data):
-    w, h = data.shape
+    w, h, n = data.shape
 
-    histogramme = np.zeros(h, dtype=np.float64)
-    for y in range(h):
-        for x in range(w):
-            histogramme[y] += data[x, y]
-    for y in range(h):
-        histogramme[y] = np.sqrt(histogramme[y])
+    histogramme = np.zeros(w, dtype=np.float64)
+    for x in prange(w):
+        for y in range(h):
+            histogramme[x] += data[x, y, 0]
+
     histogramme -= histogramme.min()
     return histogramme
-
 
 def histogramme_vertical(pixels: Pixels):
     histogramme = histogramme_vertical_fast(pixels.data)
     return histogramme
-
 
 def afficher_histogramme(histogramme):
     w = histogramme.shape[0]

@@ -176,6 +176,7 @@ QMenu {
     background: #101010;
     border : 1px solid #433075;
     border-radius: 6px;
+    padding: 5px;
 }
 
 QMenu::separator {

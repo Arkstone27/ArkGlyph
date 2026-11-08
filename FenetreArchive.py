@@ -8,7 +8,6 @@ from PySide6.QtCore import Qt, QRectF, QPointF
 from time import time
 
 from DockProgress import gestion_processus
-
 from Lot import Lot, get_lots_saved
 from load_icones import SvgWidget, icone_cross
 
@@ -72,6 +71,7 @@ class OngletLot(QGraphicsView):
         self.setTransformationAnchor(self.ViewportAnchor.AnchorUnderMouse)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.indice_position = indice_position
+        self.setAcceptDrops(True)
 
         # Lot
         self.lot = lot
@@ -90,7 +90,7 @@ class OngletLot(QGraphicsView):
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         self.afficher_page_entiere()
 
-        self.taille_max = self.transform().m11()
+        self.etat_zoom = 0
         self.last_zoom = time()
 
         # Initialisation des dessins des zones de textes
@@ -99,6 +99,8 @@ class OngletLot(QGraphicsView):
         self.rectangle_actuel = None
 
         self.zones_textes = list()
+        self.couleurs_zones = [creation_brush_pen_zone(*couleur) for couleur in (
+            (67,48,117), (103, 48, 117), (48, 62, 117), (48, 97, 117), (117, 48, 97), (48, 117, 102), (117, 48, 62))]
 
         # SpinBox
         self.spin_box = SpinBoxPages(self.lot, parent=self)
@@ -132,7 +134,7 @@ class OngletLot(QGraphicsView):
         if not rectangle.isNull():
             self.fitInView(rectangle, Qt.AspectRatioMode.KeepAspectRatio) # Conserve le ratio de la page
 
-            self.taille_max = self.transform().m11()
+            self.etat_zoom = 0
 
     def changer_page(self, new_indice: int):
         self.indice_page = new_indice
@@ -154,7 +156,10 @@ class OngletLot(QGraphicsView):
 
         if event.angleDelta().y() > 0:
             self.scale(facteur_zoom, facteur_zoom)
-        elif self.transform().m11() > self.taille_max*facteur_zoom:
+            self.etat_zoom += 1
+
+        elif self.etat_zoom != 0:
+            self.etat_zoom -= 1
             self.scale(1/facteur_zoom, 1/facteur_zoom)
         super().wheelEvent(event)
 
@@ -163,17 +168,18 @@ class OngletLot(QGraphicsView):
             self.menu_deroulant.exec(event.globalPos())
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.RightButton:
-            self.point_depart = self.mapToScene(event.position().toPoint()) # Convertit les coos de la fenêtre en coos de la scène
+        point_click = self.mapToScene(event.position().toPoint()) # Convertit les coos de la fenêtre en coos de la scène
+        if event.button() == Qt.MouseButton.RightButton and self.point_dans_scene(point_click):
+            self.point_depart = point_click
+
             self.rectangle_actuel = None
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         if self.point_depart and (event.buttons() &  Qt.MouseButton.RightButton):
             point_actuel = self.mapToScene(event.position().toPoint())
-            x, y = point_actuel.x(), point_actuel.y()
 
-            if 0 <= x <= self.w and 0 <= y <= self.h:
+            if self.point_dans_scene(point_actuel):
                 rectangle = QRectF(self.point_depart, point_actuel).normalized()
 
                 path = QPainterPath()
@@ -181,8 +187,10 @@ class OngletLot(QGraphicsView):
 
                 if self.rectangle_actuel is None:
                     self.rectangle_actuel = ZoneTexteItem(path, self.scene)
-                    self.rectangle_actuel.setPen(QPen(QColor(67, 48, 117), 2)) # épaisseur de 2px
-                    self.rectangle_actuel.setBrush(QBrush(QColor(67, 48, 117, 150)))
+
+                    brush, pen = self.couleurs_zones[0]
+                    self.rectangle_actuel.setPen(pen) # épaisseur de 2px
+                    self.rectangle_actuel.setBrush(brush)
 
                     self.scene.addItem(self.rectangle_actuel)
 
@@ -193,10 +201,10 @@ class OngletLot(QGraphicsView):
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.RightButton and self.rectangle_actuel:
-            brush = QBrush(QColor(67, 48, 117, 100))
+            brush, pen = self.couleurs_zones[0]
             self.rectangle_actuel.setBrush(brush)
 
-            self.zones_textes.append(ZoneTexte(self.rectangle_actuel))
+            self.zones_textes.append(ZoneTexte(self.rectangle_actuel, 0))
 
         super().mouseReleaseEvent(event)
 
@@ -207,6 +215,36 @@ class OngletLot(QGraphicsView):
             self.duplication_zone_texte()
 
         super().keyPressEvent(event)
+
+    def point_dans_scene(self, point):
+        x, y = point.x(), point.y()
+
+        return 0 <= x <= self.w and 0 <= y <= self.h
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        position_drop = self.mapToScene(event.position().toPoint())
+
+        if event.mimeData().hasText() and self.point_dans_scene(position_drop):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasText():
+            indice_column = int(event.mimeData().text())
+            position_drop = event.position().toPoint()
+            item_dessous = self.itemAt(position_drop)
+
+            if isinstance(item_dessous, ZoneTexteItem):
+                self.changer_lien_zone(item_dessous, indice_column)
+
+            event.acceptProposedAction()
 
     def remove_zone_texte(self):
         new_zones = list()
@@ -224,6 +262,12 @@ class OngletLot(QGraphicsView):
             if zone_texte.scene_rectangle.isSelected():
                 self.zones_textes.append(zone_texte.copy())
                 self.scene.addItem(self.zones_textes[-1].scene_rectangle)
+
+    def changer_lien_zone(self, scene_rectangle: ZoneTexteItem, lien_tableau: int):
+        for zone_texte in self.zones_textes:
+            if zone_texte.scene_rectangle == scene_rectangle:
+                zone_texte.changer_lien(lien_tableau, *self.couleurs_zones[lien_tableau%len(self.couleurs_zones)])
+                break
 
 
 class SpinBoxPages(QSpinBox):
@@ -284,14 +328,18 @@ class ZoneTexteItem(QGraphicsPathItem):
         return new_zone
 
 class ZoneTexte:
-    def __init__(self, scene_rectangle):
+    def __init__(self, scene_rectangle, lien_tableau):
         self.scene_rectangle = scene_rectangle
-        self.lien_tableau = None
+        self.lien_tableau = lien_tableau
 
     def copy(self):
-        new_zone = ZoneTexte(self.scene_rectangle.copy())
-        new_zone.lien_tableau = self.lien_tableau
+        new_zone = ZoneTexte(self.scene_rectangle.copy(),self.lien_tableau)
         return new_zone
+
+    def changer_lien(self, new_lien: int, new_brush, new_pen):
+        self.lien_tableau = new_lien
+        self.scene_rectangle.setBrush(new_brush)
+        self.scene_rectangle.setPen(new_pen)
 
 class OngletAjoutLot(QFrame):
     def __init__(self, parent: FenetreArchive):
@@ -361,3 +409,5 @@ class WidgetDownload(QWidget):
         print("-"*50)
         gestion_processus.download_lot(self.line_edit.text())
 
+def creation_brush_pen_zone(r, v, b):
+    return QBrush(QColor(r, v, b, 100)), QPen(QColor(r,v,b), 2)

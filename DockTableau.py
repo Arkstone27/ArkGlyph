@@ -1,5 +1,8 @@
-from PySide6.QtWidgets import QDockWidget, QTableWidget, QFrame, QLabel, QPushButton, QHBoxLayout, QTableWidgetItem
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (QApplication, QDockWidget, QTableWidget,
+                               QFrame, QLabel, QPushButton, QHBoxLayout,
+                               QTableWidgetItem, QHeaderView)
+from PySide6.QtCore import Qt, QMimeData, QPoint, QRect
+from PySide6.QtGui import QDrag, QPixmap, QPainter
 
 import pandas as pd
 
@@ -41,6 +44,9 @@ class DockTableau(QDockWidget):
 class Tableau(QTableWidget):
     def __init__(self, parent=None):
         super().__init__()
+        header = HeaderDrag(Qt.Orientation.Horizontal, self)
+        self.setHorizontalHeader(header)
+
         self.nb_rows, self.nb_columns = 1, 1
         self.afficher_data(create_fake_data())
 
@@ -60,6 +66,54 @@ class Tableau(QTableWidget):
         taille_header = self.horizontalHeader().length()
 
         return taille_header + self.verticalHeader().width() + self.frameWidth()*2 + 13
+
+class HeaderDrag(QHeaderView):
+    def __init__(self, orientation, parent=None):
+        super().__init__(orientation, parent)
+        self.debut_drag = None
+        self.indice_tableau = 0
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.debut_drag = event.position().toPoint()
+            self.indice_tableau = self.logicalIndexAt(self.debut_drag)
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self.debut_drag is None or self.indice_tableau < 0:
+            return
+
+        if not(event.buttons() & Qt.MouseButton.LeftButton):
+            return
+
+        if (event.position().toPoint() - self.debut_drag).manhattanLength() < QApplication.startDragDistance():
+            return
+
+        drag = QDrag(self)
+
+        mime_data = QMimeData()
+        indice_column = str(self.indice_tableau)
+        mime_data.setText(indice_column)
+
+        drag.setMimeData(mime_data)
+
+        # Affichage du contenu
+        w = self.sectionSize(self.indice_tableau)
+        h = self.height()
+        pixmap = QPixmap(w, h)
+        pixmap.fill(Qt.transparent)
+
+        rectangle = QRect(self.sectionViewportPosition(self.indice_tableau), 0, w, h)
+
+        painter = QPainter(pixmap)
+        self.render(painter, QPoint(0,0), rectangle)
+        painter.end()
+
+        drag.setPixmap(pixmap)
+        drag.setHotSpot(event.position().toPoint() - rectangle.topLeft()) # Point d'accroche
+
+        drag.exec(Qt.DropAction.MoveAction)
+        self.debut_drag = None
 
 class TitreDeck(QFrame):
     def __init__(self, parent=None):

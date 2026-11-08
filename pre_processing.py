@@ -1,35 +1,12 @@
-import numpy as np
-
 import plotly.graph_objects as go
 import plotly.express as px
-import pandas as pd
 
-from socle import *
+import numpy as np
 from numba import njit
 
-@njit
-def teinte_gris(couleur):
-    return couleur[0]*0.299 + couleur[1]*0.587 + couleur[2]*0.114
-
-def conversion_gris(pixels):
-    pixels_gris = pixels.appliquer(teinte_gris)
-    pixels_gris.data = pixels_gris.data[:,:,0].astype(np.uint8)
-    pixels_gris.mode_couleur = "L"
-
-    return pixels_gris
-
-def flou_classique(pixels, rayon: int):
-    longueur_noyau = rayon*2+1
-    noyau = np.ones((longueur_noyau, longueur_noyau))
-
-    taille_noyau = longueur_noyau*longueur_noyau
-    @njit
-    def division_flou(somme):
-        return somme / taille_noyau
-
-    pixels_flou = pixels.convolution(noyau, division_flou)
-
-    return pixels_flou
+from ArkMage.image import ouvrir_image, Pixels
+from ArkMage.commun import conversion_gris
+from ArkMage.commun import flou_classique
 
 def calcul_histogramme(data):
     unique, occurrences = np.unique(data, return_counts=True)
@@ -104,14 +81,14 @@ def calcul_seuil(zone):
 
     seuil = int(seuil_otsu(histogramme, zone.size))
     afficher_histogramme(histogramme, seuil)
-
     return seuil
 
 def conversion_binaire(pixels):
-    seuil = calcul_seuil(pixels.data) + pixels.data.std()
+    data_255 = (pixels.data * 255).astype(np.uint8)
+    seuil = (calcul_seuil(data_255) + data_255.std()) / 255
 
-    data_saillance = calcul_distances(pixels.data.astype(np.float64)) > 43
-    data_seuil = pixels.data < seuil
+    data_saillance = calcul_distances(pixels.data[:, :, 0].astype(np.float64)) > 43
+    data_seuil = pixels.data[:, :, 0] < seuil
 
     Pixels(data_seuil, "B").show()
 
