@@ -263,7 +263,7 @@ class OngletLot(QGraphicsView):
                 self.zones_textes.append(zone_texte.copy())
                 self.scene.addItem(self.zones_textes[-1].scene_rectangle)
 
-    def changer_lien_zone(self, scene_rectangle: ZoneTexteItem, lien_tableau: int):
+    def changer_lien_zone(self, scene_rectangle, lien_tableau: int):
         for zone_texte in self.zones_textes:
             if zone_texte.scene_rectangle == scene_rectangle:
                 zone_texte.changer_lien(lien_tableau, *self.couleurs_zones[lien_tableau%len(self.couleurs_zones)])

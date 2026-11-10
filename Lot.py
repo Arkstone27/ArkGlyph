@@ -25,32 +25,34 @@ class Lot:
         else:
             self.page_data = np.array([(data["page_data"] >> i) & 1 for i in range(self.nb_pages)], dtype=bool)
         self.lot_process = self.width_max is not None # Si le lot à déjà été traité
-        print(self.width_max, self.height_max, self.page_data)
 
-    def post_traitement(self):
-        width_max, height_max = 0, 0
-        page_data = np.ones(self.nb_pages, dtype=bool)
+def post_traitement(lot):
+    width_max, height_max = 0, 0
+    page_data = np.ones(lot.nb_pages, dtype=bool)
 
-        for chemin_page in self.chemins_pages:
-            img = Image.open(chemin_page)
-            w, h = img.size
+    # Recherche des dimensions maximales
+    for chemin_page in lot.chemins_pages:
+        img = Image.open(chemin_page)
+        w, h = img.size
 
-            if w > width_max:width_max = w
-            if h > height_max:height_max = h
+        if w > width_max:width_max = w
+        if h > height_max:height_max = h
 
-        nb_pixels = (width_max*height_max) / 2
-        for indice, chemin_page in enumerate(self.chemins_pages):
-            img = Image.open(chemin_page)
-            w, h = img.size
+    # Disqualification des images 2x plus petite que le max
+    nb_pixels = (width_max*height_max) / 2
+    for indice, chemin_page in enumerate(lot.chemins_pages):
+        img = Image.open(chemin_page)
+        w, h = img.size
 
-            if w*h < nb_pixels:
-                page_data[indice] = False
+        if w*h < nb_pixels:
+            page_data[indice] = False
 
-        packed_byte_array = np.packbits(page_data.astype(np.uint8))
-        page_data_int = int.from_bytes(packed_byte_array, byteorder="big")
+    packed_byte_array = np.packbits(page_data.astype(np.uint8))
+    page_data_int = int.from_bytes(packed_byte_array, byteorder="big")
 
-        creation_json(self.chemin_lot, self.url, width_max, height_max, page_data_int)
-        self.get_data_json()
+    creation_json(lot.chemin_lot, lot.url, width_max, height_max, page_data_int)
+    lot.get_data_json()
+
 def remplacer(nom_lot):
     return nom_lot.replace("~", "/").replace("#", ":")
 
@@ -72,18 +74,19 @@ def creation_json(chemin_lot: Path, url_lot: str, width_max=None, height_max=Non
 
 chemin_lots = Path("Lots_ArchLate")
 
+
 if __name__ == '__main__':
     chemins_lot, noms_lots = get_lots_saved()
-    print(chemins_lot, noms_lots)
+    print(chemins_lot, noms_lots, "\n")
 
     if  chemins_lot:
         creation_json(chemins_lot[0], "www.test.com")
 
         lot_1 = Lot(chemins_lot[0])
-        print(lot_1.chemins_pages[0].resolve())
-        print(lot_1.chemins_pages)
+        print(lot_1.chemins_pages[0].resolve(), "\n")
+        print(lot_1.chemins_pages, "\n")
 
-        lot_1.post_traitement()
-        print(lot_1.nom, lot_1.page_data)
+        post_traitement(lot_1)
+        print(lot_1.nom, lot_1.page_data, lot_1.width_max, lot_1.height_max)
 
 
