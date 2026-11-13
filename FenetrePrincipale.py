@@ -1,11 +1,12 @@
-from PySide6.QtWidgets import QApplication, QMainWindow
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QMainWindow, QHBoxLayout, QFrame
+from PySide6.QtCore import QSize, Qt
 
 import sys
 
-from FenetreArchive import FenetreArchive
-from DockProgress import DockProgress, gestion_processus
-from DockTableau import DockTableau
+from SideBarOutils import SideBarOutils
+from FrameCentre import FrameCentre
+
+from remplacer_palette import palette
 
 class FenetrePrincipal(QMainWindow):
     def __init__(self):
@@ -14,23 +15,21 @@ class FenetrePrincipal(QMainWindow):
         # Propriétés de la fenêtre
         self.setWindowTitle("ArchLate")
         self.setGeometry(200,200,1024,768)
+        # self.setWindowFlags(Qt.WindowType.FramelessWindowHint) # On retire les bords
 
-        # Widgets
-        self.fenetre_archive = FenetreArchive(self)
-        self.setCentralWidget(self.fenetre_archive)
+        self.frame_all = QFrame(self)
 
-        self.dock_progress = DockProgress(self)
-        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.dock_progress)
+        self.frame_centre = FrameCentre(self)
+        self.sidebar_outils = SideBarOutils(self)
 
-        self.dock_tableau = DockTableau(self)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_tableau)
+        # Disposition
+        self.disposition = QHBoxLayout(self.frame_all)
+        self.disposition.setContentsMargins(0,0,0,0)
 
-        self.menu_bar = self.menuBar()
-        self.menu_fichier = self.menu_bar.addMenu("Fichier")
+        self.disposition.addWidget(self.sidebar_outils)
+        self.disposition.addWidget(self.frame_centre)
 
-        # Thread Pool
-        gestion_processus.set_Fenetres(self)
-
+        self.setCentralWidget(self.frame_all)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
@@ -43,4 +42,4 @@ if __name__ == '__main__':
     fenetre_principal = FenetrePrincipal()
     fenetre_principal.show()
 
-    app.exec()
+    sys.exit(app.exec())

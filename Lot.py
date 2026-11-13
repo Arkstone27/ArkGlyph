@@ -7,10 +7,9 @@ import numpy as np
 class Lot:
     def __init__(self, chemin_lot: Path):
         self.chemin_lot = chemin_lot
-        self.chemins_pages = list(self.chemin_lot.glob("*.jpg"))
-        self.chemins_pages.sort(key=lambda chemin_page: int(chemin_page.stem))
+        self.chemins_pages = None
 
-        self.nb_pages = len(self.chemins_pages)
+        self.nb_pages = len(list(self.chemin_lot.glob("*.jpg")))
         self.nom = remplacer(self.chemin_lot.name)
         self.get_data_json()
 
@@ -25,6 +24,12 @@ class Lot:
         else:
             self.page_data = np.array([(data["page_data"] >> i) & 1 for i in range(self.nb_pages)], dtype=bool)
         self.lot_process = self.width_max is not None # Si le lot à déjà été traité
+   
+    def get_chemins_pages(self):
+        if self.chemins_pages is None:
+            self.chemins_pages = list(self.chemin_lot.glob("*.jpg"))
+            self.chemins_pages.sort(key=lambda chemin_page: int(chemin_page.stem))
+        return self.chemins_pages
 
 def post_traitement(lot):
     width_max, height_max = 0, 0
@@ -58,8 +63,8 @@ def remplacer(nom_lot):
 
 def get_lots_saved():
     chemins_lot = [chemin_lot for chemin_lot in chemin_lots.iterdir() if chemin_lot.is_dir()]
-
-    return chemins_lot, [remplacer(chemin_lot.name) for chemin_lot in chemins_lot]
+    lots = [Lot(chemin_lot) for chemin_lot in chemins_lot]
+    return lots
 
 def creation_json(chemin_lot: Path, url_lot: str, width_max=None, height_max=None, page_data=None):
     data = {

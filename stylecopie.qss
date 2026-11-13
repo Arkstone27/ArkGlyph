@@ -1,0 +1,191 @@
+* { 
+    font-family: "JetBrains Mono";
+}
+
+
+QFrame {
+    background: @bgdark
+}
+
+QFrame#Trans {
+    background: transparent;
+}
+
+QLabel#Titre {
+    background: transparent;
+    font-size: 18px;
+    color: @textsimple;
+}
+
+QLabel#titre {
+    background: transparent;
+    font-size: 16px;
+    color: @textsimple;
+}
+
+QLabel#texte {
+    background: transparent;
+    font-size: 16px;
+    color: @textmuted;
+}
+
+QPushButton {
+    background: @bgall;
+    color: @textmuted;
+
+    border-radius: 6px;
+    border: 1px solid @border;
+
+    height: 34px;
+    min-width: 22px;
+    font-size: 16px;
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+QPushButton::hover {
+    background: @gradient;
+    border: 1px solid @primlight;
+}
+
+QToolTip {
+    background: @bgdark;
+    color: @textmuted;
+    border: none;
+
+    font-size: 14px;
+}
+
+QLineEdit {
+    background: @bgall;
+    font-size: 16px;
+    color: @textmuted;
+
+    border: 1px solid @border;
+    border-radius: 6px;
+
+    height: 34px;
+}
+
+QLineEdit:hover {
+    background: @gradient;
+    border: 1px solid @primlight;
+}
+
+QPushButton#Trans {
+    background: transparent;
+    color: @textmuted;
+    border: none;
+
+    height: 34px;
+    min-width: 22px;
+    font-size: 16px;
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+QPushButton#Trans::hover {
+    background: @bglight;
+    border: 1px solid transparent;
+    border-radius: 6px;
+}
+
+QPushButton#Red {
+    background: transparent;
+    color: @textmuted;
+
+    border-radius: 6px;
+    border: 1px solid @red;
+
+    height: 34px;
+    min-width: 22px;
+    font-size: 16px;
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+QPushButton#Red::hover {
+    background: @gradient;
+}
+
+QScrollBar {
+    background: @bgall;
+    border-left: 1px solid @separator;
+    border-radius: 6px;
+}
+
+QScrollBar::handle {
+    background: @bglight;
+    border-radius: 6px;
+}
+
+QScrollBar::handle:hover {
+    border: 1px solid @border;
+    background: @separator;
+}
+
+QScrollBar:horizontal {
+    height: 14px;
+}
+
+QScrollBar:vertical {
+    width: 14px;
+}
+
+QScrollBar::add-line, QScrollBar::sub-line {
+    height: 0px;
+
+}
+
+QTabBar::tab {
+    background: transparent;
+    border: none;
+    color: @textmuted;
+
+    height: 34px;
+    min-width: 68px;
+    font-size: 16px;
+
+    margin-right: 2px;
+    padding-right: 18px;
+    padding-left: 18px;
+}
+
+QTabBar {
+    border: none;
+    background: transparent;
+    qproperty-drawBase: 0;
+}
+
+QTabBar::tab::hover {
+    background: @bglight;
+    border: 1px solid transparent;
+    border-radius: 6px;
+}
+
+QTabBar::tab::selected {
+    background: @bglight;
+    border: 1px solid @primlight;
+    border-radius: 6px;
+}
+
+QFrame#Ajout, QGraphicsView {
+    background: @bgall;
+    border: 2px solid @border;
+    border-radius: 6px;
+    margin-left: 6px;
+}
+
+QListWidget {
+    background: transparent;
+    border: 1px solid @separator;
+    border-radius: 6px;
+}
+
+QListWidget::item {
+    border-bottom: 1px solid @separator;
+}
+
+QListWidget::item:selected, QListWidget::item:hover {
+    background: @bglight;
+}
