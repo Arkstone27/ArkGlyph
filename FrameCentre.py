@@ -1,7 +1,8 @@
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QFrame, QStackedWidget, QListWidget, QListWidgetItem, QLabel, QTabBar, QPushButton, QSizePolicy
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QCursor
 
+from traitement_style import icones
 from Lot import Lot, get_lots_saved
 from VueScene import VueScene
 
@@ -13,11 +14,11 @@ class FrameCentre(QFrame):
         # Variables
         self.lots_ouverts = list()
 
-        # Widgets
+        # Widgets
         self.barre_superieure = BarreSuperieure(self)
 
-        # Centre
-        self.centre = QStackedWidget(self) # self.tab_bar.currentChanged.connect(self.stack.setCurrentIndex)
+        # Centre
+        self.centre = QStackedWidget(self)
         self.vue_scene = VueScene()
         self.frame_ajout = FrameAjout(self)
 
@@ -30,41 +31,58 @@ class FrameCentre(QFrame):
         self.disposition.addWidget(self.barre_superieure)
         self.disposition.addWidget(self.centre)
 
-        self.centre.setCurrentIndex(1)
     def action_ajout(self):
         self.centre.setCurrentIndex(0)
 
+    def action_lot(self, indice_lot: int):
+        self.centre.setCurrentIndex(1)
+        self.vue_scene.update_lot(self.lots_ouverts[indice_lot])
 
-        
+    def ajout_lot(self, lot):
+        if lot in self.lots_ouverts:
+            return
+        self.lots_ouverts.append(lot)
+        self.barre_superieure.ajout_lot(lot)
+
 class BarreSuperieure(QFrame):
     def __init__(self, frame_centre: FrameCentre):
         super().__init__(parent=frame_centre)
-        # Variables
+        # Variables
         self.ouverture = True
         self.frame_centre = frame_centre
         
         # Widgets
         self.tab_bar = QTabBar(self)
         self.tab_bar.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.tab_bar.currentChanged.connect(self.frame_centre.action_lot)
 
-        self.btn_ajout = QPushButton("+")
+        self.btn_ajout = QPushButton()
         self.btn_ajout.clicked.connect(self.frame_centre.action_ajout)
         self.btn_ajout.hide()
 
-        self.btn_settings = QPushButton("⊛")
+        self.btn_settings = QPushButton()
 
-        self.btn_reduire = QPushButton("-")
+        self.btn_reduire = QPushButton()
         self.btn_reduire.clicked.connect(self.frame_centre.fenetre_principal.showMinimized)
 
-        self.btn_agrandir = QPushButton("□")
+        self.btn_agrandir = QPushButton()
         self.btn_agrandir.clicked.connect(self.frame_centre.fenetre_principal.showMaximized)
 
-        self.btn_fermer = QPushButton("x")
+        self.btn_fermer = QPushButton()
         self.btn_fermer.clicked.connect(self.frame_centre.fenetre_principal.close)
 
+        # Styles
         for btn in (self.btn_ajout, self.btn_settings, self.btn_reduire, self.btn_agrandir, self.btn_fermer):
             btn.setObjectName("Trans")
             btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            btn.setIconSize(QSize(20, 20))
+
+        self.btn_ajout.setIcon(icones["new"])
+
+        self.btn_settings.setIcon(icones["settings"])
+        self.btn_reduire.setIcon(icones["minus"])
+        self.btn_agrandir.setIcon(icones["maximize"])
+        self.btn_fermer.setIcon(icones["close"])
         
         # Disposition
         self.disposition = QHBoxLayout(self)
@@ -79,15 +97,18 @@ class BarreSuperieure(QFrame):
         self.disposition.addWidget(self.btn_agrandir)
         self.disposition.addWidget(self.btn_fermer)
 
-
+    def ajout_lot(self, lot):
+        self.tab_bar.addTab(lot.nom)
+        self.btn_ajout.show()
 
 class FrameAjout(QFrame):
     def __init__(self, frame_centre: FrameCentre):
         super().__init__(parent=frame_centre)
         self.setObjectName("Ajout")
+        self.frame_centre = frame_centre
 
         # Variables
-        self.lots = get_lots_saved()*40
+        self.lots = get_lots_saved()
 
         # Widgets
         self.label_lots = QLabel(f"{len(self.lots)} Lots" if len(self.lots) else "Aucun Lot")
@@ -130,7 +151,7 @@ class FrameAjout(QFrame):
     def lot_selected(self, item):
         indice_lot = self.liste_lots.currentRow()
         self.liste_lots.setCurrentRow(-1)
-        print(indice_lot)
+        self.frame_centre.ajout_lot(self.lots[indice_lot])
 
 
 class DefLot(QFrame):
@@ -149,7 +170,9 @@ class DefLot(QFrame):
         self.label_infos.setText(f"{lot.nb_pages} pages ∙ <a href='{lot.url}' style='color: #bcb2ff' >{clean_url(lot.url)}</a>")
         self.label_infos.setOpenExternalLinks(True)
 
-        self.btn_supprimer = QPushButton("⍔")
+        self.btn_supprimer = QPushButton()
+        self.btn_supprimer.setIcon(icones["trash"])
+        self.btn_supprimer.setIconSize(QSize(20, 20))
         self.btn_supprimer.setObjectName("Red")
         self.btn_supprimer.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.btn_supprimer.setFixedSize(34, 34)

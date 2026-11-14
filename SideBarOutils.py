@@ -1,6 +1,8 @@
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QFrame, QWidget, QLabel, QLineEdit, QPushButton
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QCursor
+
+from traitement_style import icones, IconLabel
 
 class SideBarOutils(QFrame):
     def __init__(self, parent=None):
@@ -9,26 +11,25 @@ class SideBarOutils(QFrame):
         self.setMaximumWidth(300)
         self.setMinimumWidth(50)
 
-        # Widgets
-        self.label_titre = QLabel("◘ ArchLate")
-        self.btn_close = QPushButton("<<")
+        # Widgets
+        self.label_titre = IconLabel(icones["logo"], "ArchLate", 20, "Titre")
+
+        self.btn_close = QPushButton()
+        self.btn_close.setIcon(icones["hide"])
+        self.btn_close.setIconSize(QSize(20,20))
         self.btn_close.setObjectName("Trans")
         self.btn_close.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
-        self.label_outils = QLabel("◘ Outils")
+        self.label_outils = IconLabel(icones["outils"], "Outils", 20, "Titre")
 
         self.label_download = QLabel("Téléchargement")
         self.widget_download = WidgetDownload(self)
 
         self.label_type = QLabel("Type")
 
-        # Styles
-        self.label_titre.setObjectName("Titre")
-        self.label_outils.setObjectName("Titre")
-
+        # Styles
         self.label_download.setObjectName("Titre")
         self.label_type.setObjectName("Titre")
-        
 
         # Disposition
         self.disposition = QVBoxLayout(self)
@@ -62,7 +63,9 @@ class WidgetDownload(QWidget):
         self.line_edit = QLineEdit(parent=self, placeholderText="url")
         self.line_edit.textChanged.connect(self.line_edit.setToolTip)
 
-        self.btn_download = QPushButton("Y", self)
+        self.btn_download = QPushButton("", self)
+        self.btn_download.setIcon(icones["global-search"])
+        self.btn_download.setIconSize(QSize(20,20))
         self.btn_download.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.btn_download.clicked.connect(self.download_url)
 

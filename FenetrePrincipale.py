@@ -1,12 +1,11 @@
 from PySide6.QtWidgets import QApplication, QMainWindow, QHBoxLayout, QFrame
-from PySide6.QtCore import QSize, Qt
 
 import sys
 
 from SideBarOutils import SideBarOutils
 from FrameCentre import FrameCentre
 
-from remplacer_palette import palette
+from traitement_style import application_palette, chargement_fonts
 
 class FenetrePrincipal(QMainWindow):
     def __init__(self):
@@ -35,6 +34,9 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
 
     # Style
+    chargement_fonts()
+    application_palette()
+
     with open("style.qss", "r") as f:
         _style = f.read()
         app.setStyleSheet(_style)

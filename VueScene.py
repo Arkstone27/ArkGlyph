@@ -1,9 +1,10 @@
 from PySide6.QtWidgets import QGridLayout, QSpinBox, QGraphicsScene, QGraphicsView, QTableWidget, QPushButton, QWidget
-from PySide6.QtCore import Qt, QRectF, QPointF
+from PySide6.QtCore import Qt, QRectF, QPointF, QSize
 from PySide6.QtGui import QCursor
 
 import pandas as pd
 
+from traitement_style import icones
 from Lot import Lot
 
 def create_fake_data():
@@ -17,10 +18,14 @@ class VueScene(QGraphicsView):
 
         # Widgets
         self.spin_box = SpinBoxPages()
+        self.spin_box.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
-        self.btn_tableau = QPushButton("◧")
+        self.btn_tableau = QPushButton()
+        self.btn_tableau.setIcon(icones["table"])
+        self.btn_tableau.setIconSize(QSize(20,20))
         self.btn_tableau.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        # Disposition
+
+        # Disposition
         self.disposition = QGridLayout(self)
 
         self.disposition.setRowStretch(0, 0)
@@ -34,6 +39,8 @@ class VueScene(QGraphicsView):
         self.disposition.addWidget(self.spin_box, 2, 1)
         self.disposition.addWidget(self.btn_tableau, 0, 2, Qt.AlignmentFlag.AlignRight)
 
+    def update_lot(self, lot):
+        self.spin_box.update_lot(lot)
 
 class SpinBoxPages(QSpinBox):
     def __init__(self, parent=None):

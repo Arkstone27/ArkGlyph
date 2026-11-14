@@ -4,7 +4,7 @@
 
 
 QFrame {
-    background: @bgdark
+    background: pbgdark;
 }
 
 QFrame#Trans {
@@ -14,27 +14,27 @@ QFrame#Trans {
 QLabel#Titre {
     background: transparent;
     font-size: 18px;
-    color: @textsimple;
+    color: ptextsimple;
 }
 
 QLabel#titre {
     background: transparent;
     font-size: 16px;
-    color: @textsimple;
+    color: ptextsimple;
 }
 
 QLabel#texte {
     background: transparent;
     font-size: 16px;
-    color: @textmuted;
+    color: ptextmuted;
 }
 
 QPushButton {
-    background: @bgall;
-    color: @textmuted;
+    background: pbgall;
+    color: ptextmuted;
 
     border-radius: 6px;
-    border: 1px solid @border;
+    border: 1px solid pborder;
 
     height: 34px;
     min-width: 22px;
@@ -44,37 +44,37 @@ QPushButton {
 }
 
 QPushButton::hover {
-    background: @gradient;
-    border: 1px solid @primlight;
+    background: pgradient;
+    border: 1px solid pprimlight;
 }
 
 QToolTip {
-    background: @bgdark;
-    color: @textmuted;
+    background: pbgdark;
+    color: ptextmuted;
     border: none;
 
     font-size: 14px;
 }
 
 QLineEdit {
-    background: @bgall;
+    background: pbgall;
     font-size: 16px;
-    color: @textmuted;
+    color: ptextmuted;
 
-    border: 1px solid @border;
+    border: 1px solid pborder;
     border-radius: 6px;
 
     height: 34px;
 }
 
 QLineEdit:hover {
-    background: @gradient;
-    border: 1px solid @primlight;
+    background: pgradient;
+    border: 1px solid pprimlight;
 }
 
 QPushButton#Trans {
     background: transparent;
-    color: @textmuted;
+    color: ptextmuted;
     border: none;
 
     height: 34px;
@@ -85,17 +85,17 @@ QPushButton#Trans {
 }
 
 QPushButton#Trans::hover {
-    background: @bglight;
+    background: pbglight;
     border: 1px solid transparent;
     border-radius: 6px;
 }
 
 QPushButton#Red {
     background: transparent;
-    color: @textmuted;
+    color: ptextmuted;
 
     border-radius: 6px;
-    border: 1px solid @red;
+    border: 1px solid pred;
 
     height: 34px;
     min-width: 22px;
@@ -105,23 +105,27 @@ QPushButton#Red {
 }
 
 QPushButton#Red::hover {
-    background: @gradient;
+    background: pgradient;
 }
 
 QScrollBar {
-    background: @bgall;
-    border-left: 1px solid @separator;
+    background: pbgall;
+    border-left: 1px solid pseparator;
     border-radius: 6px;
 }
 
+QScrollBar::sub-page, QScrollBar::add-page {
+    background: transparent;
+}
+
 QScrollBar::handle {
-    background: @bglight;
+    background: pbglight;
     border-radius: 6px;
 }
 
 QScrollBar::handle:hover {
-    border: 1px solid @border;
-    background: @separator;
+    border: 1px solid pborder;
+    background: pseparator;
 }
 
 QScrollBar:horizontal {
@@ -134,13 +138,12 @@ QScrollBar:vertical {
 
 QScrollBar::add-line, QScrollBar::sub-line {
     height: 0px;
-
 }
 
 QTabBar::tab {
     background: transparent;
     border: none;
-    color: @textmuted;
+    color: ptextmuted;
 
     height: 34px;
     min-width: 68px;
@@ -158,34 +161,87 @@ QTabBar {
 }
 
 QTabBar::tab::hover {
-    background: @bglight;
+    background: pbglight;
     border: 1px solid transparent;
     border-radius: 6px;
 }
 
 QTabBar::tab::selected {
-    background: @bglight;
-    border: 1px solid @primlight;
+    background: pbglight;
+    border: 1px solid pprimlight;
     border-radius: 6px;
 }
 
 QFrame#Ajout, QGraphicsView {
-    background: @bgall;
-    border: 2px solid @border;
+    background: pbgall;
+    border: 2px solid pborder;
     border-radius: 6px;
     margin-left: 6px;
 }
 
 QListWidget {
     background: transparent;
-    border: 1px solid @separator;
+    border: 1px solid pseparator;
     border-radius: 6px;
 }
 
 QListWidget::item {
-    border-bottom: 1px solid @separator;
+    border-bottom: 1px solid pseparator;
 }
 
 QListWidget::item:selected, QListWidget::item:hover {
-    background: @bglight;
+    background: pbglight;
+}
+
+QSpinBox {
+    background: transparent;
+    font-size: 16px;
+    color: ptextsimple;
+    border-radius: 6px;
+
+    padding-right: 5px;
+    padding-left: 5px;
+    margin-bottom: 5px;
+}
+
+QSpinBox::down-button:hover, QSpinBox::up-button:hover {
+    background: pbglight;
+}
+
+QSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: center left;
+    width: 20px;
+    height: 20px;
+
+    background: transparent;
+    left: 5px;
+
+    padding: 5px;
+    border-radius: 6px;
+}
+
+QSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: center right;
+    width: 20px;
+    height: 20px;
+
+    background: transparent;
+    right: 5px;
+
+    padding: 5px;
+    border-radius: 6px;
+}
+
+QSpinBox::up-arrow {
+    image: url("resources/dark-icons/next.svg");
+    width: 20px;
+    height: 20px;
+}
+
+QSpinBox::down-arrow {
+    image: url("resources/dark-icons/previous.svg");
+    width: 20px;
+    height: 20px;
 }
