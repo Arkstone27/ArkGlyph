@@ -2,23 +2,27 @@ from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QFrame, QWidget, QLabel,
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QCursor
 
-from traitement_style import icones, IconLabel
+from traitement_style import icones, IconLabel, Icon
 
 class SideBarOutils(QFrame):
     def __init__(self, parent=None):
         super().__init__()
         self.setObjectName("SideBarOutils")
-        self.setMaximumWidth(300)
-        self.setMinimumWidth(50)
+
+        # Variables
+        self.visible = True
 
         # Widgets
         self.label_titre = IconLabel(icones["logo"], "ArchLate", 20, "Titre")
+        self.icon_titre = Icon(icones["logo"], 20)
 
-        self.btn_close = QPushButton()
-        self.btn_close.setIcon(icones["hide"])
-        self.btn_close.setIconSize(QSize(20,20))
-        self.btn_close.setObjectName("Trans")
-        self.btn_close.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_show_hide = QPushButton()
+        self.btn_show_hide.clicked.connect(self.switch_visible)
+
+        self.btn_show_hide.setIcon(icones["hide"])
+        self.btn_show_hide.setIconSize(QSize(20, 20))
+        self.btn_show_hide.setObjectName("Trans")
+        self.btn_show_hide.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         self.label_outils = IconLabel(icones["outils"], "Outils", 20, "Titre")
 
@@ -34,12 +38,9 @@ class SideBarOutils(QFrame):
         # Disposition
         self.disposition = QVBoxLayout(self)
         self.disposition.setSpacing(0)
-        
-        self.disposition_titre = QHBoxLayout()
-        self.disposition_titre.addWidget(self.label_titre)
-        self.disposition_titre.addStretch(1)
-        self.disposition_titre.addWidget(self.btn_close)
-        self.disposition.addLayout(self.disposition_titre)
+
+        self.disposition.addWidget(self.label_titre)
+        self.disposition.addWidget(self.icon_titre)
         self.disposition.addSpacing(15)
 
         self.disposition.addWidget(self.label_outils)
@@ -52,7 +53,28 @@ class SideBarOutils(QFrame):
         self.disposition.addWidget(self.label_type)
 
         self.disposition.addStretch(1)
-        self.setLayout(self.disposition)
+        self.disposition.addWidget(self.btn_show_hide, 1, Qt.AlignmentFlag.AlignRight)
+
+        self.switch_visible()
+
+    def switch_visible(self):
+        self.visible = not self.visible
+
+        if self.visible:
+            self.btn_show_hide.setIcon(icones["show"])
+            self.setFixedWidth(250)
+
+            for widget in (self.label_titre, self.label_outils, self.label_download, self.widget_download, self.label_type):
+                widget.show()
+            self.icon_titre.hide()
+        else:
+            self.btn_show_hide.setIcon(icones["hide"])
+            self.setFixedWidth(50)
+
+            for widget in (self.label_titre, self.label_outils, self.label_download, self.widget_download, self.label_type):
+                widget.hide()
+            self.icon_titre.show()
+
 
 class WidgetDownload(QWidget):
     def __init__(self, parent: SideBarOutils):

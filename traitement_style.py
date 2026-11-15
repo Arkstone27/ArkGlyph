@@ -1,6 +1,7 @@
 from pathlib import Path
 from PySide6.QtWidgets import QLabel, QWidget, QHBoxLayout
-from PySide6.QtGui import QFontDatabase ,QIcon
+from PySide6.QtGui import QFontDatabase ,QIcon, QBrush, QColor, QPen
+from PySide6.QtCore import Qt
 
 palette = {
     "pbgdark": "#0e0e11",
@@ -42,8 +43,13 @@ chemins_icones = (Path("resources") / "dark-icons").glob("*.svg")
 for chemin_icone in chemins_icones:
     icones[chemin_icone.name.replace(".svg", "")] = QIcon(str(chemin_icone))
 
-class IconLabel(QWidget):
+def creation_brush_pen_zone(r, v, b):
+    return QBrush(QColor(r, v, b, 100)), QPen(QColor(r,v,b), 2)
 
+couleurs_zones = [creation_brush_pen_zone(*couleur) for couleur in (
+            (67, 48, 117), (103, 48, 117), (48, 62, 117), (48, 97, 117), (117, 48, 97), (48, 117, 102), (117, 48, 62))]
+
+class IconLabel(QWidget):
     def __init__(self, icon: QIcon, texte: str, height: int, nom: str="texte"):
         super().__init__()
 
@@ -51,12 +57,45 @@ class IconLabel(QWidget):
         label_pixmap = QLabel()
         label_pixmap.setPixmap(pixmap)
 
-        label = QLabel(texte)
-        label.setObjectName(nom)
+        self.label = QLabel(texte)
+        self.label.setObjectName(nom)
 
         disposition = QHBoxLayout(self)
         disposition.setContentsMargins(0, 0, 0, 0)
 
         disposition.addWidget(label_pixmap)
-        disposition.addWidget(label)
+        disposition.addWidget(self.label)
         disposition.addStretch(1)
+
+class Icon(QLabel):
+    def __init__(self, icon: QIcon, height: int):
+        super().__init__()
+
+        pixmap = icon.pixmap(height, height)
+        self.setPixmap(pixmap)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+class IconLabels(QWidget):
+    def __init__(self, icons_textes: list[str|QIcon], noms: list[str], height: int):
+        super().__init__()
+        liste_labels = list()
+        for icon_texte, nom in zip(icons_textes, noms):
+            label = QLabel()
+            if isinstance(icon_texte, str):
+                label.setText(icon_texte)
+                if "<a href=" in icon_texte:
+                    label.setOpenExternalLinks(True) # Support des liens
+            else:
+                pixmap = icon_texte.pixmap(height, height)
+                label.setPixmap(pixmap)
+
+            label.setObjectName(nom)
+            liste_labels.append(label)
+
+        # Disposition
+        self.disposition = QHBoxLayout(self)
+
+        for label in liste_labels:
+            self.disposition.addWidget(label)
+
+        self.disposition.addStretch(1)

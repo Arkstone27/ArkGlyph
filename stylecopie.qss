@@ -23,6 +23,10 @@ QLabel#titre {
     color: ptextsimple;
 }
 
+QLabel#titre:disabled {
+    color: ptextmuted;
+}
+
 QLabel#texte {
     background: transparent;
     font-size: 16px;
@@ -143,7 +147,7 @@ QScrollBar::add-line, QScrollBar::sub-line {
 QTabBar::tab {
     background: transparent;
     border: none;
-    color: ptextmuted;
+    color: ptextsimple;
 
     height: 34px;
     min-width: 68px;
@@ -193,22 +197,22 @@ QListWidget::item:selected, QListWidget::item:hover {
     background: pbglight;
 }
 
-QSpinBox {
-    background: transparent;
+QSpinBox#Pages {
+    background: rgba(19, 19, 21, 150);
     font-size: 16px;
     color: ptextsimple;
     border-radius: 6px;
 
     padding-right: 5px;
     padding-left: 5px;
-    margin-bottom: 5px;
+    margin-bottom: 10px;
 }
 
-QSpinBox::down-button:hover, QSpinBox::up-button:hover {
-    background: pbglight;
+QSpinBox#Pages::down-button:hover, QSpinBox#Pages::up-button:hover {
+    bottom: 2px;
 }
 
-QSpinBox::down-button {
+QSpinBox#Pages::down-button {
     subcontrol-origin: border;
     subcontrol-position: center left;
     width: 20px;
@@ -221,7 +225,7 @@ QSpinBox::down-button {
     border-radius: 6px;
 }
 
-QSpinBox::up-button {
+QSpinBox#Pages::up-button {
     subcontrol-origin: border;
     subcontrol-position: center right;
     width: 20px;
@@ -234,14 +238,22 @@ QSpinBox::up-button {
     border-radius: 6px;
 }
 
-QSpinBox::up-arrow {
+QSpinBox#Pages::up-arrow {
     image: url("resources/dark-icons/next.svg");
     width: 20px;
     height: 20px;
 }
 
-QSpinBox::down-arrow {
+QSpinBox#Pages::down-arrow {
     image: url("resources/dark-icons/previous.svg");
     width: 20px;
     height: 20px;
+}
+
+QFrame#SideBarOutils {
+    margin-top: 8px;
+}
+
+QGraphicsView QScrollBar:vertical {
+    width: 0px;
 }

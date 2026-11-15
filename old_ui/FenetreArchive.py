@@ -146,6 +146,7 @@ class OngletLot(QGraphicsView):
             self.afficher_page_entiere()
 
         self.w, self.h = self.scene.width(), self.scene.height()
+
     def resizeEvent(self, event):
         if (time() - self.last_zoom) > 0.1:
             self.afficher_page_entiere()

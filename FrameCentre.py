@@ -2,9 +2,9 @@ from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QFrame, QStackedWidget, 
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QCursor
 
-from traitement_style import icones
+from traitement_style import icones, IconLabels
 from Lot import Lot, get_lots_saved
-from VueScene import VueScene
+from VueScene import VueScene, SceneLot
 
 class FrameCentre(QFrame):
     def __init__(self, fenetre_principal):
@@ -12,7 +12,7 @@ class FrameCentre(QFrame):
         self.fenetre_principal = fenetre_principal
 
         # Variables
-        self.lots_ouverts = list()
+        self.lots_ouverts, self.scenes = list(), list()
 
         # Widgets
         self.barre_superieure = BarreSuperieure(self)
@@ -33,15 +33,22 @@ class FrameCentre(QFrame):
 
     def action_ajout(self):
         self.centre.setCurrentIndex(0)
+        self.barre_superieure.action_ajout(len(self.lots_ouverts))
 
     def action_lot(self, indice_lot: int):
+        if indice_lot == self.barre_superieure.indice_new_tab:
+            return
+
         self.centre.setCurrentIndex(1)
-        self.vue_scene.update_lot(self.lots_ouverts[indice_lot])
+        self.vue_scene.update_lot(self.scenes[indice_lot])
+        if len(self.lots_ouverts) != self.barre_superieure.tab_bar.count():
+            self.barre_superieure.remove_new_tab()
 
     def ajout_lot(self, lot):
         if lot in self.lots_ouverts:
             return
         self.lots_ouverts.append(lot)
+        self.scenes.append(SceneLot(lot, self.vue_scene))
         self.barre_superieure.ajout_lot(lot)
 
 class BarreSuperieure(QFrame):
@@ -50,9 +57,11 @@ class BarreSuperieure(QFrame):
         # Variables
         self.ouverture = True
         self.frame_centre = frame_centre
+        self.indice_new_tab = 0
         
         # Widgets
         self.tab_bar = QTabBar(self)
+        self.tab_bar.addTab("...")
         self.tab_bar.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.tab_bar.currentChanged.connect(self.frame_centre.action_lot)
 
@@ -97,8 +106,22 @@ class BarreSuperieure(QFrame):
         self.disposition.addWidget(self.btn_agrandir)
         self.disposition.addWidget(self.btn_fermer)
 
+    def remove_new_tab(self):
+        self.tab_bar.removeTab(self.indice_new_tab)
+
+    def action_ajout(self, indice_tab):
+        if self.tab_bar.tabText(self.tab_bar.currentIndex()) == "...":
+            return
+        self.indice_new_tab = indice_tab
+        self.tab_bar.addTab("...")
+        self.tab_bar.setCurrentIndex(self.indice_new_tab)
+
     def ajout_lot(self, lot):
-        self.tab_bar.addTab(lot.nom)
+        self.tab_bar.setTabText(self.indice_new_tab, clean_nom(lot))
+        self.tab_bar.setTabToolTip(self.indice_new_tab, lot.nom)
+
+        indice_temp, self.indice_new_tab = self.indice_new_tab, None
+        self.frame_centre.action_lot(indice_temp)
         self.btn_ajout.show()
 
 class FrameAjout(QFrame):
@@ -109,6 +132,8 @@ class FrameAjout(QFrame):
 
         # Variables
         self.lots = get_lots_saved()
+        self.deflots = list()
+        self.indices_disabled= set()
 
         # Widgets
         self.label_lots = QLabel(f"{len(self.lots)} Lots" if len(self.lots) else "Aucun Lot")
@@ -133,10 +158,13 @@ class FrameAjout(QFrame):
 
     def update_lots(self):
         self.liste_lots.clear()
+        self.deflots = list()
+
         max_width, height = 600, 100
         for lot in self.lots:
             item = QListWidgetItem(self.liste_lots)
             def_lot = DefLot(lot)
+            self.deflots.append(def_lot)
 
             max_width = max(def_lot.sizeHint().width() + 100, max_width)
             height = def_lot.sizeHint().height()
@@ -150,8 +178,17 @@ class FrameAjout(QFrame):
 
     def lot_selected(self, item):
         indice_lot = self.liste_lots.currentRow()
+        if indice_lot in self.indices_disabled or indice_lot == -1:
+            return
+
+        item = self.liste_lots.item(indice_lot)
+        item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+        self.deflots[indice_lot].disabled()
+
+        self.indices_disabled.add(indice_lot)
         self.liste_lots.setCurrentRow(-1)
         self.frame_centre.ajout_lot(self.lots[indice_lot])
+
 
 
 class DefLot(QFrame):
@@ -163,12 +200,9 @@ class DefLot(QFrame):
         # Widgets
         self.label_nom = QLabel(f"Archlate/{lot.nom}")
         self.label_nom.setObjectName("titre")
-    
-        self.label_infos = QLabel()
-        self.label_infos.setObjectName("texte")
 
-        self.label_infos.setText(f"{lot.nb_pages} pages ∙ <a href='{lot.url}' style='color: #bcb2ff' >{clean_url(lot.url)}</a>")
-        self.label_infos.setOpenExternalLinks(True)
+        self.label_infos = IconLabels([icones["paper"], f"{lot.nb_pages} pages ∙", icones["link"], f"<a href='{lot.url}' style='color: #bcb2ff' >{clean_url(lot.url)}</a>"],
+                                      ["texte"]*4,20)
 
         self.btn_supprimer = QPushButton()
         self.btn_supprimer.setIcon(icones["trash"])
@@ -187,6 +221,11 @@ class DefLot(QFrame):
         self.disposition.addLayout(self.disposition_v)
         self.disposition.addWidget(self.btn_supprimer)
 
+    def disabled(self):
+        self.setCursor(QCursor(Qt.CursorShape.ForbiddenCursor))
+        self.label_nom.setEnabled(False)
+        self.btn_supprimer.hide()
+
 def clean_url(url: str):
     idx_debut = url.find("//") + 1
     url = url[idx_debut+1:]
@@ -196,3 +235,11 @@ def clean_url(url: str):
     if idx_fin_slash == -1 or url.count("/") == 1:
         return url
     return f"{url[:idx_fin_slash]}/.../{url[-idx_debut_slash:]}"
+
+def clean_nom(lot: Lot):
+    nom = lot.nom
+    indice_tiret = len(nom) - nom[::-1].find("-")
+
+    if len(nom[:indice_tiret]) < 12:
+        return nom
+    return f"{nom[:6]}... -{nom[indice_tiret:]}"
