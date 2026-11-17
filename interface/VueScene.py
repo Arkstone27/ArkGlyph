@@ -6,8 +6,8 @@ from PySide6.QtGui import QCursor, QPixmap, QPainterPath
 import pandas as pd
 from time import time
 
-from traitement_style import icones, couleurs_zones
-from Lot import Lot
+from interface.traitement_style import icones, couleurs_zones
+from download.Lot import Lot
 
 def create_fake_data():
     dico = {f"Test {i}": ["t"*j for j in range(100)] for i in range(6)}
@@ -15,8 +15,10 @@ def create_fake_data():
     return pd.DataFrame.from_dict(dico)
 
 class VueScene(QGraphicsView):
-    def __init__(self):
+    def __init__(self, sidebar):
         super().__init__()
+
+        self.sidebar = sidebar
 
         self.setTransformationAnchor(self.ViewportAnchor.AnchorUnderMouse)
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
@@ -24,7 +26,7 @@ class VueScene(QGraphicsView):
 
         # Variables
         self.last_zoom = time()
-        self.scene = SceneLot(None, None, True)
+        self.scene: SceneLot = SceneLot(None, None, True)
 
         # Zones de textes
         self.point_depart = None
@@ -42,12 +44,13 @@ class VueScene(QGraphicsView):
 
         # Menu déroulant
         self.menu_deroulant = QMenu(self)
-        self.action_dupliquer = self.menu_deroulant.addAction("Dupliquer")
+        self.action_dupliquer = self.menu_deroulant.addAction("Dupliquer (D)")
 
-        self.action_supprimer = self.menu_deroulant.addAction("Supprimer")
+        self.action_supprimer = self.menu_deroulant.addAction("Supprimer (S)")
 
         self.menu_deroulant.addSeparator()
-        action_type = self.menu_deroulant.addAction("Choisir le type   ")
+        self.menu_types = MenuTypes(self)
+        self.menu_deroulant.addMenu(self.menu_types)
 
         # Disposition
         self.disposition = QGridLayout(self)
@@ -110,11 +113,15 @@ class VueScene(QGraphicsView):
 
     def mousePressEvent(self, event):
         point_click = self.mapToScene(event.position().toPoint()) # Convertit les coos de la fenêtre en coos de la scène
-        print(self.point_dans_scene(point_click), self.scene.w, self.scene.h)
         if event.button() == Qt.MouseButton.RightButton and self.point_dans_scene(point_click):
-            self.point_depart = point_click
+            item_dessous = self.itemAt(event.pos())
 
-            self.rectangle_actuel = None
+            if isinstance(item_dessous, ZoneTexteItem):
+                item_dessous.setSelected(True)
+
+            else:
+                self.point_depart = point_click
+                self.rectangle_actuel = None
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
@@ -129,9 +136,10 @@ class VueScene(QGraphicsView):
 
                 if self.rectangle_actuel is None:
                     self.rectangle_actuel = ZoneTexteItem(path, self.scene)
+                    lien_tableau = self.sidebar.widget_types.indice_selected
 
-                    brush, pen = couleurs_zones[0]
-                    self.rectangle_actuel.setPen(pen) # épaisseur de 2px
+                    brush, pen = couleurs_zones[lien_tableau%len(couleurs_zones)]
+                    self.rectangle_actuel.setPen(pen)
                     self.rectangle_actuel.setBrush(brush)
 
                     self.scene.addItem(self.rectangle_actuel)
@@ -143,10 +151,16 @@ class VueScene(QGraphicsView):
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.RightButton and self.rectangle_actuel:
-            brush, pen = couleurs_zones[0]
+            rectangle = self.rectangle_actuel.boundingRect()
+            if rectangle.width() < 30 or rectangle.height() < 30: # On retire les zones trop petites
+                self.scene.removeItem(self.rectangle_actuel)
+                return
+
+            lien_tableau = self.sidebar.widget_types.indice_selected
+            brush, pen = couleurs_zones[lien_tableau%len(couleurs_zones)]
             self.rectangle_actuel.setBrush(brush)
 
-            self.scene.zones_textes.append(ZoneTexte(self.rectangle_actuel, 0))
+            self.scene.zones_textes.append(ZoneTexte(self.rectangle_actuel, lien_tableau))
         elif event.button() == Qt.MouseButton.LeftButton:
             self.update_position()
 
@@ -173,8 +187,37 @@ class VueScene(QGraphicsView):
         return 0 <= x <= self.scene.w and 0 <= y <= self.scene.h
 
     def contextMenuEvent(self, event):
-        if self.scene.selectedItems():
+        item_dessous = self.itemAt(event.pos())
+        if isinstance(item_dessous, ZoneTexteItem): 
             self.menu_deroulant.exec(event.globalPos())
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        position_drop = self.mapToScene(event.position().toPoint())
+
+        if event.mimeData().hasText() and self.point_dans_scene(position_drop):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasText() and event.mimeData().text().isdigit():
+            indice_type = int(event.mimeData().text())
+            position_drop = event.position().toPoint()
+            item_dessous = self.itemAt(position_drop)
+
+            if isinstance(item_dessous, ZoneTexteItem):
+                self.scene.changer_lien_zone(indice_type, item_dessous)
+
+            event.acceptProposedAction()
+
+    def changer_lien_zone(self, indice_type: int):
+        self.scene.changer_lien_zone(indice_type)
 
 class SpinBoxPages(QSpinBox):
     def __init__(self, vue_scene: VueScene):
@@ -187,11 +230,14 @@ class SpinBoxPages(QSpinBox):
 
     def update_lot(self, scene):
         self.setSuffix(f"/{scene.lot.nb_pages}")
-        self.setRange(1, scene.lot.nb_pages)
-        self.setValue(scene.indice_page+1)
-
+        
+        if scene.lot.nb_pages < self.value():
+            self.setValue(scene.indice_page+1)
+            self.setRange(1, scene.lot.nb_pages)
+        else:
+            self.setRange(1, scene.lot.nb_pages)
+            self.setValue(scene.indice_page+1)       
         self.scene = scene
-
 
 class SceneLot(QGraphicsScene): 
     def __init__(self, lot: Lot, vue_scene: VueScene, vide=False):
@@ -240,11 +286,12 @@ class SceneLot(QGraphicsScene):
                 self.zones_textes.append(zone_texte.copy())
                 self.addItem(self.zones_textes[-1].scene_rectangle)
 
-    def changer_lien_zone(self, scene_rectangle, lien_tableau: int):
+    def changer_lien_zone(self, lien_tableau: int, scene_rectangle=None):
         for zone_texte in self.zones_textes:
-            if zone_texte.scene_rectangle == scene_rectangle:
+            if zone_texte.scene_rectangle == scene_rectangle or (scene_rectangle is None and zone_texte.scene_rectangle.isSelected()):
                 zone_texte.changer_lien(lien_tableau, *couleurs_zones[lien_tableau%len(couleurs_zones)])
                 break
+
 
 class ZoneTexteItem(QGraphicsPathItem):
     def __init__(self, path, scene, parent=None):
@@ -252,7 +299,7 @@ class ZoneTexteItem(QGraphicsPathItem):
 
         self.w_scene = 0
         self.h_scene = 0
-        self.scene = scene
+        self.scene: QGraphicsScene = scene
         self.get_max_scene()
 
         self.setFlag(QGraphicsPathItem.GraphicsItemFlag.ItemIsMovable, True)
@@ -293,17 +340,44 @@ class ZoneTexte:
     def __init__(self, scene_rectangle, lien_tableau):
         self.scene_rectangle = scene_rectangle
         self.lien_tableau = lien_tableau
+        self.update_tooltip()
 
     def copy(self):
         new_zone = ZoneTexte(self.scene_rectangle.copy(),self.lien_tableau)
         return new_zone
 
+    def update_tooltip(self):
+        self.scene_rectangle.setToolTip(f"{self.lien_tableau}")
+
     def changer_lien(self, new_lien: int, new_brush, new_pen):
         self.lien_tableau = new_lien
+
         self.scene_rectangle.setBrush(new_brush)
         self.scene_rectangle.setPen(new_pen)
+        self.update_tooltip()
 
+class MenuTypes(QMenu):
+    def __init__(self, vue_scene: VueScene):
+        super().__init__()
+        self.setTitle("Choisir le type")
+
+        self.vue_scene = vue_scene
+        self.update_types(self.vue_scene.sidebar.widget_types.noms_type)
+    
+    def update_types(self, noms_type: list[str]):
+        self.clear()
+
+        for indice_type, nom_type in enumerate(noms_type):
+            action = self.addAction(nom_type)
+            action.triggered.connect(lambda checked=False, idx=indice_type: self.vue_scene.changer_lien_zone(idx))
+        
+
+class InfosProcess:
+    pass
 
 class Tableau(QTableWidget):
     def __init__(self):
         super().__init__()
+
+        
+

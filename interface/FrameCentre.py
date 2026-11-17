@@ -1,10 +1,13 @@
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QFrame, QStackedWidget, QListWidget, QListWidgetItem, QLabel, QTabBar, QPushButton, QSizePolicy
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QCursor
+from PySide6.QtGui import QCursor, QResizeEvent
 
-from traitement_style import icones, IconLabels
-from Lot import Lot, get_lots_saved
-from VueScene import VueScene, SceneLot
+import shutil
+
+from interface.traitement_style import icones, IconLabels, SvgWidget
+from download.Lot import Lot, get_lots_saved
+from interface.VueScene import VueScene, SceneLot
+from interface.gestion_processus import ListProcessus, ListNotifs
 
 class FrameCentre(QFrame):
     def __init__(self, fenetre_principal):
@@ -19,7 +22,7 @@ class FrameCentre(QFrame):
 
         # Centre
         self.centre = QStackedWidget(self)
-        self.vue_scene = VueScene()
+        self.vue_scene = VueScene(self.fenetre_principal.sidebar_outils)
         self.frame_ajout = FrameAjout(self)
 
         self.centre.addWidget(self.frame_ajout)
@@ -31,6 +34,13 @@ class FrameCentre(QFrame):
         self.disposition.addWidget(self.barre_superieure)
         self.disposition.addWidget(self.centre)
 
+        # Informations des processus & Notifications
+        self.liste_processus = ListProcessus(self)
+        self.liste_processus.raise_()
+
+        self.liste_notifs = ListNotifs(self)
+        self.liste_notifs.raise_()
+
     def action_ajout(self):
         self.centre.setCurrentIndex(0)
         self.barre_superieure.action_ajout(len(self.lots_ouverts))
@@ -38,7 +48,6 @@ class FrameCentre(QFrame):
     def action_lot(self, indice_lot: int):
         if indice_lot == self.barre_superieure.indice_new_tab:
             return
-
         self.centre.setCurrentIndex(1)
         self.vue_scene.update_lot(self.scenes[indice_lot])
         if len(self.lots_ouverts) != self.barre_superieure.tab_bar.count():
@@ -51,6 +60,11 @@ class FrameCentre(QFrame):
         self.scenes.append(SceneLot(lot, self.vue_scene))
         self.barre_superieure.ajout_lot(lot)
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.liste_processus.update_position()
+        self.liste_notifs.update_position()
+
 class BarreSuperieure(QFrame):
     def __init__(self, frame_centre: FrameCentre):
         super().__init__(parent=frame_centre)
@@ -61,6 +75,7 @@ class BarreSuperieure(QFrame):
         
         # Widgets
         self.tab_bar = QTabBar(self)
+
         self.tab_bar.addTab("...")
         self.tab_bar.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.tab_bar.currentChanged.connect(self.frame_centre.action_lot)
@@ -75,7 +90,7 @@ class BarreSuperieure(QFrame):
         self.btn_reduire.clicked.connect(self.frame_centre.fenetre_principal.showMinimized)
 
         self.btn_agrandir = QPushButton()
-        self.btn_agrandir.clicked.connect(self.frame_centre.fenetre_principal.showMaximized)
+        self.btn_agrandir.clicked.connect(self.frame_centre.fenetre_principal.maximizer)
 
         self.btn_fermer = QPushButton()
         self.btn_fermer.clicked.connect(self.frame_centre.fenetre_principal.close)
@@ -124,6 +139,7 @@ class BarreSuperieure(QFrame):
         self.frame_centre.action_lot(indice_temp)
         self.btn_ajout.show()
 
+
 class FrameAjout(QFrame):
     def __init__(self, frame_centre: FrameCentre):
         super().__init__(parent=frame_centre)
@@ -131,12 +147,14 @@ class FrameAjout(QFrame):
         self.frame_centre = frame_centre
 
         # Variables
-        self.lots = get_lots_saved()
+        self.lots = list()
         self.deflots = list()
-        self.indices_disabled= set()
+        self.indices_disabled = set()
 
         # Widgets
-        self.label_lots = QLabel(f"{len(self.lots)} Lots" if len(self.lots) else "Aucun Lot")
+        self.widget_load = SvgWidget("interface/resources/dark-icons/lot-load.svg", 100)
+
+        self.label_lots = QLabel()
         self.label_lots.setObjectName("Titre")
 
         self.liste_lots = QListWidget(self)
@@ -147,6 +165,7 @@ class FrameAjout(QFrame):
         # Disposition
         self.disposition_v = QVBoxLayout()
         self.disposition_v.addStretch(1)
+        self.disposition_v.addWidget(self.widget_load, 1, Qt.AlignmentFlag.AlignHCenter)
         self.disposition_v.addWidget(self.label_lots)
         self.disposition_v.addWidget(self.liste_lots, 3)
         self.disposition_v.addStretch(3)
@@ -157,14 +176,22 @@ class FrameAjout(QFrame):
         self.disposition.addStretch(1)
 
     def update_lots(self):
+        self.lots = get_lots_saved(self.lots)
+        self.label_lots.setText(f"{len(self.lots)} Lots" if len(self.lots) else "Aucun Lot")
+
         self.liste_lots.clear()
-        self.deflots = list()
+        self.deflots, self.indices_disabled = list(), set()
+        lots_ouverts = self.frame_centre.lots_ouverts
 
         max_width, height = 600, 100
-        for lot in self.lots:
+        for indice_lot, lot in enumerate(self.lots):
             item = QListWidgetItem(self.liste_lots)
-            def_lot = DefLot(lot)
+            def_lot = DefLot(lot, self)
             self.deflots.append(def_lot)
+            if lot in lots_ouverts:
+                def_lot.disabled()
+                self.indices_disabled.add(indice_lot)
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
 
             max_width = max(def_lot.sizeHint().width() + 100, max_width)
             height = def_lot.sizeHint().height()
@@ -189,10 +216,16 @@ class FrameAjout(QFrame):
         self.liste_lots.setCurrentRow(-1)
         self.frame_centre.ajout_lot(self.lots[indice_lot])
 
+    def supprimer_lot(self, lot: Lot):
+        indice_lot = self.lots.index(lot)
+        self.lots.pop(indice_lot)
 
+        shutil.rmtree(lot.chemin_lot)
+        
+        self.update_lots()
 
 class DefLot(QFrame):
-    def __init__(self, lot: Lot):
+    def __init__(self, lot: Lot, frame_ajout: FrameAjout):
         super().__init__()
         self.setObjectName("Trans")
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -210,6 +243,8 @@ class DefLot(QFrame):
         self.btn_supprimer.setObjectName("Red")
         self.btn_supprimer.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.btn_supprimer.setFixedSize(34, 34)
+
+        self.btn_supprimer.clicked.connect(lambda checked=False, lot=lot: frame_ajout.supprimer_lot(lot))
 
         # Disposition
         self.disposition_v = QVBoxLayout()

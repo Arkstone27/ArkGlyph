@@ -1,7 +1,8 @@
 from pathlib import Path
 from PySide6.QtWidgets import QLabel, QWidget, QHBoxLayout
-from PySide6.QtGui import QFontDatabase ,QIcon, QBrush, QColor, QPen
+from PySide6.QtGui import QFontDatabase ,QIcon, QBrush, QColor, QPen, QPainter
 from PySide6.QtCore import Qt
+from PySide6.QtSvg import QSvgRenderer
 
 palette = {
     "pbgdark": "#0e0e11",
@@ -22,7 +23,7 @@ palette = {
 }
 
 def application_palette():
-    with open("stylecopie.qss", "r") as f:
+    with open(Path("interface") / "stylecopie.qss", "r") as f:
         _style = f.read()
 
     for nom_couleur, hexa_couleur in palette.items():
@@ -38,7 +39,7 @@ def chargement_fonts():
         QFontDatabase.addApplicationFont(str(chemin_dossier / nom_font))
 
 icones = dict()
-chemins_icones = (Path("resources") / "dark-icons").glob("*.svg")
+chemins_icones = (Path("interface") / "resources" /"dark-icons").glob("*.svg")
 
 for chemin_icone in chemins_icones:
     icones[chemin_icone.name.replace(".svg", "")] = QIcon(str(chemin_icone))
@@ -46,8 +47,9 @@ for chemin_icone in chemins_icones:
 def creation_brush_pen_zone(r, v, b):
     return QBrush(QColor(r, v, b, 100)), QPen(QColor(r,v,b), 2)
 
-couleurs_zones = [creation_brush_pen_zone(*couleur) for couleur in (
-            (67, 48, 117), (103, 48, 117), (48, 62, 117), (48, 97, 117), (117, 48, 97), (48, 117, 102), (117, 48, 62))]
+couleurs = ((67, 48, 117), (103, 48, 117), (48, 62, 117), (48, 97, 117), (117, 48, 97), (48, 117, 102), (117, 48, 62))
+couleurs_zones = [creation_brush_pen_zone(*couleur) for couleur in couleurs]
+couleurs_hexs = [QColor(*couleur, 100).name()  for couleur in couleurs]
 
 class IconLabel(QWidget):
     def __init__(self, icon: QIcon, texte: str, height: int, nom: str="texte"):
@@ -99,3 +101,23 @@ class IconLabels(QWidget):
             self.disposition.addWidget(label)
 
         self.disposition.addStretch(1)
+
+class SvgWidget(QWidget):
+    def __init__(self, chemin_svg, taille, parent=None):
+        super().__init__(parent)
+
+        self.rendu = QSvgRenderer(chemin_svg, self)
+        self.rendu.setAspectRatioMode(Qt.KeepAspectRatio)
+        self.rendu.repaintNeeded.connect(self.update)
+
+        self.setFixedSize(taille, taille)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        self.rendu.render(painter, self.rect())
+        painter.end()
+
+    def sizeHint(self):
+        return self.rendu.defaultSize()

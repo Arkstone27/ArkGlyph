@@ -239,13 +239,13 @@ QSpinBox#Pages::up-button {
 }
 
 QSpinBox#Pages::up-arrow {
-    image: url("resources/dark-icons/next.svg");
+    image: url("interface/resources/dark-icons/next.svg");
     width: 20px;
     height: 20px;
 }
 
 QSpinBox#Pages::down-arrow {
-    image: url("resources/dark-icons/previous.svg");
+    image: url("interface/resources/dark-icons/previous.svg");
     width: 20px;
     height: 20px;
 }
@@ -256,4 +256,53 @@ QFrame#SideBarOutils {
 
 QGraphicsView QScrollBar:vertical {
     width: 0px;
+}
+
+QLineEdit#Type {
+    color: ptextsimple;
+}
+
+QMenu {
+    background: pborder;
+    padding: 5px;
+}
+
+QMenu::separator {
+    background: pseparator;
+    height: 2px;
+
+}
+
+QMenu::item {
+    padding-left: 5px;
+    padding-right: 20px;
+    font-size: 16px;
+    color: ptextsimple;
+}
+
+QMenu::item:selected {
+    background: pbglight;
+    padding-left: 10px;
+    padding-right: 5px;
+
+    border: 2px solid transparent;
+    border-radius: 6px;
+}
+
+QListWidget#Process {
+    background: transparent;
+    border: none;
+}
+
+QListWidget#Process::item {
+    background: rgba(24, 24, 27, 200);
+    border: 1px solid pborder;
+    border-radius: 6px;
+
+    margin: 5px;
+    padding: 5px;
+}
+
+QListWidget#Process::item QFrame {
+    background: transparent;
 }

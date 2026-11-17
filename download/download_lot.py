@@ -1,8 +1,8 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as TimeoutErrorPlay
 import requests
 
 from pathlib import Path
-from Lot import creation_json
+from download.Lot import creation_json
 
 def is_valide(url: str):
     try:
@@ -45,7 +45,7 @@ def ouverture_navigateur(url_lot: str, signaux):
             page.goto(url_lot, wait_until='load')
 
             signaux.status.emit("Ouverture de la visionneuse...", 0)
-            if page.content()[27] == "c":
+            if url_lot.count("/") == 5:
                 page_visio = ouvre_visionneuse(page, contexte)
             else:
                 page_visio = page
@@ -55,11 +55,11 @@ def ouverture_navigateur(url_lot: str, signaux):
             if existant:
                 return True, nom_lot
 
-            signaux.status.emit(f"Téléchargement de la page 1/{nb_pages}...", 0)
+            signaux.status.emit(f"1/{nb_pages} pages...", 0)
             save_img(page_visio, chemin_lot, 1)
             for n_page in range(2, nb_pages+1):
                 appuie_bouton("//button[@title='Suivant' and not(contains(@class, 'disabled'))]", page_visio)
-                signaux.status.emit(f"Téléchargement de la page {n_page}/{nb_pages}...", 0)
+                signaux.status.emit(f"{n_page}/{nb_pages} pages...", 0)
                 save_img(page_visio, chemin_lot, n_page)
             page_visio.close()
             page.close()
@@ -80,7 +80,12 @@ def ouvre_visionneuse(page, contexte):
 def preparation_page(page_visio):
     # Initialisation
     appuie_bouton("//input[@value='Accepter']", page_visio)
-    appuie_bouton("//button[@title='Premier' and not(contains(@class, 'disabled'))]", page_visio)
+    try:
+        appuie_bouton("//button[@title='Premier' and not(contains(@class, 'disabled'))]", page_visio)
+    except TimeoutErrorPlay:
+        pass # Si la page est déjà la première
+    except Exception as e:
+        raise 
 
     # Nombre de pages (images)
     texte_count = page_visio.locator("xpath=//span[contains(@class, 'page-count')]").text_content()

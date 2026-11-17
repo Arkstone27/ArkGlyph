@@ -61,10 +61,12 @@ def post_traitement(lot):
 def remplacer(nom_lot):
     return nom_lot.replace("~", "/").replace("#", ":")
 
-def get_lots_saved():
-    chemins_lot = [chemin_lot for chemin_lot in chemin_lots.iterdir() if chemin_lot.is_dir()]
+def get_lots_saved(lots_show: list[Lot]):
+    chemins_lot_show = [lot.chemin_lot for lot in lots_show]
+
+    chemins_lot = [chemin_lot for chemin_lot in chemin_lots.iterdir() if (chemin_lot.is_dir() and not chemin_lot in chemins_lot_show)]
     lots = [Lot(chemin_lot) for chemin_lot in chemins_lot]
-    return lots
+    return lots + lots_show
 
 def creation_json(chemin_lot: Path, url_lot: str, width_max=None, height_max=None, page_data=None):
     data = {
@@ -81,7 +83,7 @@ chemin_lots = Path("Lots_ArchLate")
 
 
 if __name__ == '__main__':
-    chemins_lot, noms_lots = get_lots_saved()
+    chemins_lot, noms_lots = get_lots_saved(list())
     print(chemins_lot, noms_lots, "\n")
 
     if  chemins_lot:

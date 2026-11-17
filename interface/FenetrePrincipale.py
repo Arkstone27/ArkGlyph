@@ -2,10 +2,12 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QHBoxLayout, QFrame
 
 import sys
 
-from SideBarOutils import SideBarOutils
-from FrameCentre import FrameCentre
+from interface.SideBarOutils import SideBarOutils
+from interface.FrameCentre import FrameCentre
+from interface.WidgetNotifs import WidgetNotifs
 
-from traitement_style import application_palette, chargement_fonts
+from interface.traitement_style import application_palette, chargement_fonts
+from interface.gestion_processus import gestion_processus
 
 class FenetrePrincipal(QMainWindow):
     def __init__(self):
@@ -18,9 +20,10 @@ class FenetrePrincipal(QMainWindow):
 
         self.frame_all = QFrame(self)
 
-        self.frame_centre = FrameCentre(self)
         self.sidebar_outils = SideBarOutils(self)
-
+        self.frame_centre = FrameCentre(self)
+        gestion_processus.set_widgets(self)
+        
         # Disposition
         self.disposition = QHBoxLayout(self.frame_all)
         self.disposition.setContentsMargins(0,0,0,0)
@@ -30,7 +33,13 @@ class FenetrePrincipal(QMainWindow):
 
         self.setCentralWidget(self.frame_all)
 
-if __name__ == '__main__':
+    def maximizer(self):
+        self.showMaximized()
+        if not self.sidebar_outils.visible:
+            self.sidebar_outils.switch_visible()
+
+
+def chargement_app():
     app = QApplication(sys.argv)
 
     # Style
