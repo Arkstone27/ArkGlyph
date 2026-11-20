@@ -1,14 +1,14 @@
-from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QFrame, QStackedWidget, QListWidget, QListWidgetItem, QLabel, QTabBar, QPushButton, QSizePolicy
-from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QCursor, QResizeEvent
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QFrame, QStackedWidget, QListWidget, QListWidgetItem, QLabel, QTabBar, QSizePolicy
+from PySide6.QtCore import Qt, QSize, QPoint
+from PySide6.QtGui import QCursor, QMouseEvent
 
 import shutil
 
-from interface.traitement_style import icones, IconLabels, SvgWidget
-from download.Lot import Lot, get_lots_saved
+from interface.traitement_style import icones, IconLabels, SvgWidget, creation_btn_simple
 from interface.VueScene import VueScene, SceneLot
 from interface.gestion_processus import ListProcessus, ListNotifs
 
+from gestion_lot.Lot import Lot, get_lots_saved, clean_date, clean_nom, clean_url
 class FrameCentre(QFrame):
     def __init__(self, fenetre_principal):
         super().__init__(parent=fenetre_principal)
@@ -16,6 +16,10 @@ class FrameCentre(QFrame):
 
         # Variables
         self.lots_ouverts, self.scenes = list(), list()
+
+        # Informations des processus & Notifications
+        self.liste_processus = ListProcessus(self)
+        self.liste_notifs = ListNotifs(self)
 
         # Widgets
         self.barre_superieure = BarreSuperieure(self)
@@ -30,17 +34,12 @@ class FrameCentre(QFrame):
         
         # Disposition
         self.disposition = QVBoxLayout(self)
-        self.disposition.setContentsMargins(0, 0, 0, 0)
+        self.disposition.setContentsMargins(0, 0, 6, 6)
         self.disposition.addWidget(self.barre_superieure)
         self.disposition.addWidget(self.centre)
 
-        # Informations des processus & Notifications
-        self.liste_processus = ListProcessus(self)
-        self.liste_processus.raise_()
-
-        self.liste_notifs = ListNotifs(self)
         self.liste_notifs.raise_()
-
+        self.liste_processus.raise_()
     def action_ajout(self):
         self.centre.setCurrentIndex(0)
         self.barre_superieure.action_ajout(len(self.lots_ouverts))
@@ -72,6 +71,7 @@ class BarreSuperieure(QFrame):
         self.ouverture = True
         self.frame_centre = frame_centre
         self.indice_new_tab = 0
+        self.ancien_point = QPoint()
         
         # Widgets
         self.tab_bar = QTabBar(self)
@@ -80,34 +80,21 @@ class BarreSuperieure(QFrame):
         self.tab_bar.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.tab_bar.currentChanged.connect(self.frame_centre.action_lot)
 
-        self.btn_ajout = QPushButton()
+        self.btn_ajout = creation_btn_simple("new", True)
         self.btn_ajout.clicked.connect(self.frame_centre.action_ajout)
         self.btn_ajout.hide()
 
-        self.btn_settings = QPushButton()
+        self.btn_settings = creation_btn_simple("settings", True)
 
-        self.btn_reduire = QPushButton()
+        self.btn_reduire = creation_btn_simple("minus", True)
         self.btn_reduire.clicked.connect(self.frame_centre.fenetre_principal.showMinimized)
 
-        self.btn_agrandir = QPushButton()
+        self.btn_agrandir = creation_btn_simple("maximize", True)
         self.btn_agrandir.clicked.connect(self.frame_centre.fenetre_principal.maximizer)
 
-        self.btn_fermer = QPushButton()
+        self.btn_fermer = creation_btn_simple("close", True)
         self.btn_fermer.clicked.connect(self.frame_centre.fenetre_principal.close)
 
-        # Styles
-        for btn in (self.btn_ajout, self.btn_settings, self.btn_reduire, self.btn_agrandir, self.btn_fermer):
-            btn.setObjectName("Trans")
-            btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            btn.setIconSize(QSize(20, 20))
-
-        self.btn_ajout.setIcon(icones["new"])
-
-        self.btn_settings.setIcon(icones["settings"])
-        self.btn_reduire.setIcon(icones["minus"])
-        self.btn_agrandir.setIcon(icones["maximize"])
-        self.btn_fermer.setIcon(icones["close"])
-        
         # Disposition
         self.disposition = QHBoxLayout(self)
 
@@ -139,6 +126,13 @@ class BarreSuperieure(QFrame):
         self.frame_centre.action_lot(indice_temp)
         self.btn_ajout.show()
 
+    def mousePressEvent(self, event: QMouseEvent): # Pour déplacer la fenêtre
+        super().mousePressEvent(event)
+
+        if event.button() == Qt.MouseButton.LeftButton and self.window().windowHandle():
+            self.window().windowHandle().startSystemMove()
+            event.accept()
+
 
 class FrameAjout(QFrame):
     def __init__(self, frame_centre: FrameCentre):
@@ -150,6 +144,11 @@ class FrameAjout(QFrame):
         self.lots = list()
         self.deflots = list()
         self.indices_disabled = set()
+        self.first_tri = True
+        self.indice_tri, self.liste_tri = 1, [
+            ("date", "Récents", "Par le plus récent"), 
+            ("pages", "Pages (max)", "Par le nombre de pages (décroissant)"), 
+            ("nom", "A - Z", "Par ordre Alphabétique")]
 
         # Widgets
         self.widget_load = SvgWidget("interface/resources/dark-icons/lot-load.svg", 100)
@@ -157,16 +156,25 @@ class FrameAjout(QFrame):
         self.label_lots = QLabel()
         self.label_lots.setObjectName("Titre")
 
+        self.btn_filtre = creation_btn_simple("filter", True)
+        self.btn_filtre.clicked.connect(self.tri_lots)
+
         self.liste_lots = QListWidget(self)
         self.liste_lots.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.liste_lots.setSortingEnabled(False)
         self.liste_lots.itemClicked.connect(self.lot_selected)
-        self.update_lots()
+        self.tri_lots()
 
         # Disposition
         self.disposition_v = QVBoxLayout()
         self.disposition_v.addStretch(1)
-        self.disposition_v.addWidget(self.widget_load, 1, Qt.AlignmentFlag.AlignHCenter)
-        self.disposition_v.addWidget(self.label_lots)
+        self.disposition_v.addWidget(self.widget_load, 1, Qt.AlignmentFlag.AlignCenter)
+
+        self.disposition_titre = QHBoxLayout()
+        self.disposition_titre.addWidget(self.label_lots)
+        self.disposition_titre.addWidget(self.btn_filtre)
+
+        self.disposition_v.addLayout(self.disposition_titre)
         self.disposition_v.addWidget(self.liste_lots, 3)
         self.disposition_v.addStretch(3)
 
@@ -176,7 +184,7 @@ class FrameAjout(QFrame):
         self.disposition.addStretch(1)
 
     def update_lots(self):
-        self.lots = get_lots_saved(self.lots)
+        self.lots = get_lots_saved(self.lots, self.liste_tri[self.indice_tri][0])
         self.label_lots.setText(f"{len(self.lots)} Lots" if len(self.lots) else "Aucun Lot")
 
         self.liste_lots.clear()
@@ -188,6 +196,7 @@ class FrameAjout(QFrame):
             item = QListWidgetItem(self.liste_lots)
             def_lot = DefLot(lot, self)
             self.deflots.append(def_lot)
+
             if lot in lots_ouverts:
                 def_lot.disabled()
                 self.indices_disabled.add(indice_lot)
@@ -207,7 +216,7 @@ class FrameAjout(QFrame):
         indice_lot = self.liste_lots.currentRow()
         if indice_lot in self.indices_disabled or indice_lot == -1:
             return
-
+        
         item = self.liste_lots.item(indice_lot)
         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
         self.deflots[indice_lot].disabled()
@@ -224,6 +233,18 @@ class FrameAjout(QFrame):
         
         self.update_lots()
 
+    def tri_lots(self):
+        self.indice_tri += 1
+        self.indice_tri %= 3
+
+        self.btn_filtre.setToolTip(self.liste_tri[self.indice_tri][1])
+        if self.first_tri:
+            self.first_tri = False
+        else:
+            self.frame_centre.liste_notifs.ajout_notif("Tri", self.liste_tri[self.indice_tri][2], False, 3000)
+        
+        self.update_lots()
+
 class DefLot(QFrame):
     def __init__(self, lot: Lot, frame_ajout: FrameAjout):
         super().__init__()
@@ -234,16 +255,11 @@ class DefLot(QFrame):
         self.label_nom = QLabel(f"Archlate/{lot.nom}")
         self.label_nom.setObjectName("titre")
 
-        self.label_infos = IconLabels([icones["paper"], f"{lot.nb_pages} pages ∙", icones["link"], f"<a href='{lot.url}' style='color: #bcb2ff' >{clean_url(lot.url)}</a>"],
-                                      ["texte"]*4,20)
+        self.label_infos = IconLabels([icones["time"], f"{clean_date(lot.date_download)} ∙", icones["paper"], f"{lot.nb_pages} pages ∙", icones["link"], f"<a href='{lot.url}' style='color: #bcb2ff' >{clean_url(lot.url)}</a>"],
+                                      ["texte"]*6,20)
 
-        self.btn_supprimer = QPushButton()
-        self.btn_supprimer.setIcon(icones["trash"])
-        self.btn_supprimer.setIconSize(QSize(20, 20))
+        self.btn_supprimer = creation_btn_simple("trash")
         self.btn_supprimer.setObjectName("Red")
-        self.btn_supprimer.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.btn_supprimer.setFixedSize(34, 34)
-
         self.btn_supprimer.clicked.connect(lambda checked=False, lot=lot: frame_ajout.supprimer_lot(lot))
 
         # Disposition
@@ -260,21 +276,3 @@ class DefLot(QFrame):
         self.setCursor(QCursor(Qt.CursorShape.ForbiddenCursor))
         self.label_nom.setEnabled(False)
         self.btn_supprimer.hide()
-
-def clean_url(url: str):
-    idx_debut = url.find("//") + 1
-    url = url[idx_debut+1:]
-    idx_fin_slash = url.find("/")
-    idx_debut_slash = url[::-1].find("/")
-    
-    if idx_fin_slash == -1 or url.count("/") == 1:
-        return url
-    return f"{url[:idx_fin_slash]}/.../{url[-idx_debut_slash:]}"
-
-def clean_nom(lot: Lot):
-    nom = lot.nom
-    indice_tiret = len(nom) - nom[::-1].find("-")
-
-    if len(nom[:indice_tiret]) < 12:
-        return nom
-    return f"{nom[:6]}... -{nom[indice_tiret:]}"

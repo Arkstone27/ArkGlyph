@@ -1,7 +1,7 @@
 from pathlib import Path
-from PySide6.QtWidgets import QLabel, QWidget, QHBoxLayout
-from PySide6.QtGui import QFontDatabase ,QIcon, QBrush, QColor, QPen, QPainter
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QLabel, QWidget, QHBoxLayout, QPushButton
+from PySide6.QtGui import QFontDatabase ,QIcon, QBrush, QColor, QPen, QPainter, QCursor
+from PySide6.QtCore import Qt, QSize
 from PySide6.QtSvg import QSvgRenderer
 
 palette = {
@@ -50,6 +50,17 @@ def creation_brush_pen_zone(r, v, b):
 couleurs = ((67, 48, 117), (103, 48, 117), (48, 62, 117), (48, 97, 117), (117, 48, 97), (48, 117, 102), (117, 48, 62))
 couleurs_zones = [creation_brush_pen_zone(*couleur) for couleur in couleurs]
 couleurs_hexs = [QColor(*couleur, 100).name()  for couleur in couleurs]
+
+def creation_btn_simple(nom_icone: str, transparent=False, square=True):
+    btn = QPushButton()
+    btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+
+    btn.setIcon(icones[nom_icone])
+    btn.setIconSize(QSize(20, 20))
+
+    if transparent:btn.setObjectName("Trans")
+    if square:btn.setFixedSize(34,34)
+    return btn
 
 class IconLabel(QWidget):
     def __init__(self, icon: QIcon, texte: str, height: int, nom: str="texte"):

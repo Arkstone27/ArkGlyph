@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 
+from time import time, localtime
 from PIL import Image
 import numpy as np
 
@@ -18,7 +19,10 @@ class Lot:
             data = json.load(fichier)
 
         self.width_max, self.height_max = data["width_max"], data["height_max"]
+        self.date_download = data["date_download"]
         self.url = data["url"]
+        self.date_download = data["date_download"]
+
         if data["page_data"] is None:
             self.page_data = None
         else:
@@ -61,19 +65,68 @@ def post_traitement(lot):
 def remplacer(nom_lot):
     return nom_lot.replace("~", "/").replace("#", ":")
 
-def get_lots_saved(lots_show: list[Lot]):
+def clean_date(date_download): # A refaire
+    date_actuel = localtime()
+    date = localtime(date_download)
+
+    if date_actuel.tm_year != date.tm_year:
+        return f"{date_actuel.tm_year - date.tm_year}a"
+    elif date_actuel.tm_mon != date.tm_mon:
+        return f"{date_actuel.tm_mon - date.tm_mon}m"
+    elif date_actuel.tm_mday != date.tm_mday:
+        return f"{date_actuel.tm_mday - date.tm_mday}j"
+    elif date_actuel.tm_hour != date.tm_hour:
+        return f"{date_actuel.tm_hour - date.tm_hour}h"
+    elif date_actuel.tm_min != date.tm_min:
+        return f"{date_actuel.tm_min - date.tm_min}min"
+    return f"{date_actuel.tm_sec - date.tm_sec}s"
+
+
+def clean_url(url: str):
+    idx_debut = url.find("//") + 1
+    url = url[idx_debut+1:]
+    idx_fin_slash = url.find("/")
+    idx_debut_slash = url[::-1].find("/")
+    
+    if idx_fin_slash == -1 or url.count("/") == 1:
+        return url
+    return f"{url[:idx_fin_slash]}/.../{url[-idx_debut_slash:]}"
+
+def clean_nom(lot: Lot):
+    nom = lot.nom
+    indice_tiret = len(nom) - nom[::-1].find("-")
+
+    if len(nom[:indice_tiret]) < 12:
+        return nom
+    return f"{nom[:6]}... -{nom[indice_tiret:]}"
+
+def trie_lots(lots: list[Lot], type_trie: str):
+    reverse = True
+    if type_trie == "pages":
+        key = lambda lot: lot.nb_pages
+        
+    elif type_trie == "nom":
+        key = lambda lot: lot.nom
+        reverse = False
+    else:
+        key = lambda lot: lot.date_download
+    lots.sort(key=key, reverse=reverse)
+
+def get_lots_saved(lots_show: list[Lot], type_trie: str="nb_pages"):
     chemins_lot_show = [lot.chemin_lot for lot in lots_show]
 
     chemins_lot = [chemin_lot for chemin_lot in chemin_lots.iterdir() if (chemin_lot.is_dir() and not chemin_lot in chemins_lot_show)]
-    lots = [Lot(chemin_lot) for chemin_lot in chemins_lot]
-    return lots + lots_show
+    lots = [Lot(chemin_lot) for chemin_lot in chemins_lot] + lots_show
+    trie_lots(lots, type_trie)
+    return lots
 
 def creation_json(chemin_lot: Path, url_lot: str, width_max=None, height_max=None, page_data=None):
     data = {
         "width_max": width_max,
         "height_max": height_max,
         "url": url_lot,
-        "page_data": page_data # Les pages à lire
+        "page_data": page_data, # Les pages à lire
+        "date_download": time()
     }
 
     with open(chemin_lot / "data.json", "w", encoding="utf-8") as fichier:

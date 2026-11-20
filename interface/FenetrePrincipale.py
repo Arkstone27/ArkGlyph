@@ -1,10 +1,9 @@
 from PySide6.QtWidgets import QApplication, QMainWindow, QHBoxLayout, QFrame
-
+from PySide6.QtCore import Qt
 import sys
 
 from interface.SideBarOutils import SideBarOutils
 from interface.FrameCentre import FrameCentre
-from interface.WidgetNotifs import WidgetNotifs
 
 from interface.traitement_style import application_palette, chargement_fonts
 from interface.gestion_processus import gestion_processus
@@ -16,9 +15,11 @@ class FenetrePrincipal(QMainWindow):
         # Propriétés de la fenêtre
         self.setWindowTitle("ArchLate")
         self.setGeometry(200,200,1024,768)
-        # self.setWindowFlags(Qt.WindowType.FramelessWindowHint) # On retire les bords
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint) # On retire les bords
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
 
         self.frame_all = QFrame(self)
+        self.frame_all.setObjectName("fenetre")
 
         self.sidebar_outils = SideBarOutils(self)
         self.frame_centre = FrameCentre(self)
@@ -32,7 +33,7 @@ class FenetrePrincipal(QMainWindow):
         self.disposition.addWidget(self.frame_centre)
 
         self.setCentralWidget(self.frame_all)
-
+        self.move(50, 45)
     def maximizer(self):
         self.showMaximized()
         if not self.sidebar_outils.visible:

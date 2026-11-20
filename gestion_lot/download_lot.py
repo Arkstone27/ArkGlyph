@@ -2,7 +2,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as TimeoutErrorPla
 import requests
 
 from pathlib import Path
-from download.Lot import creation_json
+from gestion_lot.Lot import creation_json
 
 def is_valide(url: str):
     try:

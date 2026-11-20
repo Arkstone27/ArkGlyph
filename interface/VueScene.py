@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import (QGridLayout, QSpinBox, QGraphicsScene, QGraphicsView, QTableWidget, QPushButton,
+from PySide6.QtWidgets import (QGridLayout, QSpinBox, QGraphicsScene, QGraphicsView, QTableWidget,
                                QGraphicsPathItem, QMenu)
 from PySide6.QtCore import Qt, QRectF, QPointF, QSize
 from PySide6.QtGui import QCursor, QPixmap, QPainterPath
@@ -6,8 +6,8 @@ from PySide6.QtGui import QCursor, QPixmap, QPainterPath
 import pandas as pd
 from time import time
 
-from interface.traitement_style import icones, couleurs_zones
-from download.Lot import Lot
+from interface.traitement_style import icones, couleurs_zones, creation_btn_simple
+from gestion_lot.Lot import Lot
 
 def create_fake_data():
     dico = {f"Test {i}": ["t"*j for j in range(100)] for i in range(6)}
@@ -37,10 +37,7 @@ class VueScene(QGraphicsView):
         self.spin_box = SpinBoxPages(self)
         self.spin_box.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
-        self.btn_tableau = QPushButton()
-        self.btn_tableau.setIcon(icones["table"])
-        self.btn_tableau.setIconSize(QSize(20,20))
-        self.btn_tableau.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_tableau = creation_btn_simple("table")
 
         # Menu déroulant
         self.menu_deroulant = QMenu(self)

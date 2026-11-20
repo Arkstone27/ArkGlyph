@@ -1,8 +1,8 @@
-from PySide6.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QGridLayout, QFrame, QWidget, QLabel, QLineEdit, QPushButton
+from PySide6.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QGridLayout, QFrame, QWidget, QLabel, QLineEdit
 from PySide6.QtCore import Qt, QSize, QMimeData, QRect, QPoint
 from PySide6.QtGui import QCursor, QDrag, QPixmap, QPainter
 
-from interface.traitement_style import icones, couleurs_hexs, IconLabel, Icon
+from interface.traitement_style import icones, couleurs_hexs, IconLabel, Icon, creation_btn_simple
 from interface.gestion_processus import gestion_processus
 
 class SideBarOutils(QFrame):
@@ -18,13 +18,8 @@ class SideBarOutils(QFrame):
         self.label_titre = IconLabel(icones["logo"], "ArchLate", 20, "Titre")
         self.icon_titre = Icon(icones["logo"], 20)
 
-        self.btn_show_hide = QPushButton()
+        self.btn_show_hide = creation_btn_simple("hide", True)
         self.btn_show_hide.clicked.connect(self.switch_visible)
-
-        self.btn_show_hide.setIcon(icones["hide"])
-        self.btn_show_hide.setIconSize(QSize(20, 20))
-        self.btn_show_hide.setObjectName("Trans")
-        self.btn_show_hide.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         self.label_outils = IconLabel(icones["outils"], "Outils", 20, "Titre")
 
@@ -89,10 +84,7 @@ class WidgetDownload(QWidget):
         self.line_edit = QLineEdit(parent=self, placeholderText="url")
         self.line_edit.textChanged.connect(self.line_edit.setToolTip)
 
-        self.btn_download = QPushButton("", self)
-        self.btn_download.setIcon(icones["global-search"])
-        self.btn_download.setIconSize(QSize(20,20))
-        self.btn_download.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_download = creation_btn_simple("global-search")
         self.btn_download.clicked.connect(self.download_url)
 
         # Disposition
@@ -117,11 +109,8 @@ class WidgetTypes(QWidget):
         self.disposition = QGridLayout(self)
         self.idx_max, self.indice_selected = 0, 0
 
-        self.btn_ajout = QPushButton()
-        self.btn_ajout.setIcon(icones["new"])
-        self.btn_ajout.setObjectName("Trans")
+        self.btn_ajout = creation_btn_simple("new", True, False)
         self.btn_ajout.clicked.connect(self.ajout_type)
-        self.btn_ajout.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         self.update_types()
         self.change_selected(0)
@@ -153,6 +142,7 @@ class WidgetTypes(QWidget):
         widget_type = WidgetType(nom_type, couleurs_hexs[self.idx_max%len(couleurs_hexs)], self, self.idx_max)
         self.disposition.addWidget(widget_type, self.idx_max//2, self.idx_max%2)        
         self.noms_type.append(nom_type)
+        self.sidebar.fenetre_principale.frame_centre.vue_scene.menu_types.update_types(self.noms_type)
         self.change_selected(self.idx_max)
         
         self.idx_max += 1
@@ -160,7 +150,6 @@ class WidgetTypes(QWidget):
 
         if len(self.noms_type) == 14:
             self.btn_ajout.hide()
-
 
 
     def change_selected(self, new_indice):

@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QListWidget, QFrame, QLabel, QListWidgetItem, QPushButton
-from PySide6.QtCore import QSize, Qt, QThreadPool, QRunnable, QObject, Signal, Slot, QObject
+from PySide6.QtCore import QSize, Qt, QThreadPool, QRunnable, QObject, Signal, Slot, QObject, QTimer
 
 from interface.traitement_style import icones, Icon
-from download.download_lot import download_lot
+from gestion_lot.download_lot import download_lot
 
 class ListProcessus(QListWidget):
     def __init__(self, frame_centre):
@@ -88,8 +88,8 @@ class ListNotifs(QListWidget):
         self.frame_centre = frame_centre
 
 
-    def ajout_notif(self, titre_notif: str, infos: str, warning: bool):
-        info_notif = InfosNotif(titre_notif, infos, warning, self)
+    def ajout_notif(self, titre_notif: str, infos: str, warning: bool, temps_vanish: int=0):
+        info_notif = InfosNotif(titre_notif, infos, warning, temps_vanish, self)
         taille = info_notif.sizeHint()
 
         item = QListWidgetItem()
@@ -131,7 +131,7 @@ class ListNotifs(QListWidget):
         self.setFixedHeight(height)
 
 class InfosNotif(QFrame):
-    def __init__(self, titre_notif: str, infos: str, warning: bool, liste_notifs: ListNotifs):
+    def __init__(self, titre_notif: str, infos: str, warning: bool, temps_vanish: int, liste_notifs: ListNotifs):
         super().__init__()
 
         # Widgets
@@ -165,6 +165,14 @@ class InfosNotif(QFrame):
         self.disposition.addLayout(self.disposition_v, 1)
         self.disposition.addWidget(self.btn_fermer, 0, Qt.AlignmentFlag.AlignTop)
 
+        # Timer (si besoin) (temps_vanish en ms)
+        if temps_vanish != 0:
+            self.timer =QTimer(self)
+            self.timer.setSingleShot(True)
+
+            self.timer.timeout.connect(lambda l=liste_notifs: l.supprimer_notif(self))
+            self.timer.start(temps_vanish)
+
 def clean_infos(infos: str):
     new_infos = " "
     lignes = infos.split("\n")
@@ -176,7 +184,7 @@ def clean_infos(infos: str):
             ligne = ligne[26:]
         new_infos += ligne
         new_infos += "\n"
-    return new_infos[:-2]
+    return new_infos[:-1]
 
 class SignauxWorker(QObject):
     status = Signal(str, int)
