@@ -173,15 +173,21 @@ class InfosNotif(QFrame):
             self.timer.timeout.connect(lambda l=liste_notifs: l.supprimer_notif(self))
             self.timer.start(temps_vanish)
 
+def coupure_intelligente(ligne, indice_max):
+    while ligne[indice_max] != " " or indice_max < 5:
+        indice_max -= 1
+    return indice_max
 def clean_infos(infos: str):
     new_infos = " "
     lignes = infos.split("\n")
     
     for ligne in lignes:
-        while len(ligne) > 25:
-            new_infos += ligne[:26]
+        while len(ligne) > 35:
+            indice_coupure = coupure_intelligente(ligne, 35)
+            new_infos += ligne[:indice_coupure+1]
             new_infos += "\n"
-            ligne = ligne[26:]
+            ligne = ligne[indice_coupure+1:]
+
         new_infos += ligne
         new_infos += "\n"
     return new_infos[:-1]
