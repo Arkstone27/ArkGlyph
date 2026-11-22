@@ -65,22 +65,20 @@ def post_traitement(lot):
 def remplacer(nom_lot):
     return nom_lot.replace("~", "/").replace("#", ":")
 
-def clean_date(date_download): # A refaire
-    date_actuel = localtime()
-    date = localtime(date_download)
+def clean_date(date_download):
+    delta_time = int(time() - date_download)
 
-    if date_actuel.tm_year != date.tm_year:
-        return f"{date_actuel.tm_year - date.tm_year}a"
-    elif date_actuel.tm_mon != date.tm_mon:
-        return f"{date_actuel.tm_mon - date.tm_mon}m"
-    elif date_actuel.tm_mday != date.tm_mday:
-        return f"{date_actuel.tm_mday - date.tm_mday}j"
-    elif date_actuel.tm_hour != date.tm_hour:
-        return f"{date_actuel.tm_hour - date.tm_hour}h"
-    elif date_actuel.tm_min != date.tm_min:
-        return f"{date_actuel.tm_min - date.tm_min}min"
-    return f"{date_actuel.tm_sec - date.tm_sec}s"
-
+    if delta_time < 60:
+        return f"{delta_time}s"
+    elif delta_time < 3600:
+        return f"{delta_time//60}min"
+    elif delta_time < 86400:
+        return f"{delta_time//3600}h"
+    elif delta_time < 2592000:
+        return f"{delta_time//86400}j"
+    elif delta_time < 31104000:
+        return f"{delta_time//2592000}m"
+    return f"{delta_time//31104000}a"
 
 def clean_url(url: str):
     idx_debut = url.find("//") + 1
