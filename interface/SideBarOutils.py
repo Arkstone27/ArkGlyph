@@ -105,9 +105,9 @@ class WidgetTypes(QWidget):
         super().__init__()
         self.sidebar = sidebar
 
-        self.noms_type = []
+        self.noms_type = ["Prénom"]
         self.disposition = QGridLayout(self)
-        self.idx_max, self.indice_selected = 0, 0
+        self.idx_max, self.indice_selected = 1, 1
 
         self.btn_ajout = creation_btn_simple("new", True, False)
         self.btn_ajout.clicked.connect(self.ajout_type)
@@ -138,7 +138,7 @@ class WidgetTypes(QWidget):
         return self.disposition.itemAtPosition(indice//2, indice%2).widget()
 
     def ajout_type(self):
-        nom_type = f"Type {self.idx_max}"
+        nom_type = f"Type {self.idx_max+1}"
         widget_type = WidgetType(nom_type, couleurs_hexs[self.idx_max%len(couleurs_hexs)], self, self.idx_max)
         self.disposition.addWidget(widget_type, self.idx_max//2, self.idx_max%2)        
         self.noms_type.append(nom_type)
