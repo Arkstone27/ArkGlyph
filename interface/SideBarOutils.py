@@ -15,7 +15,7 @@ class SideBarOutils(QFrame):
         self.visible = True
 
         # Widgets
-        self.label_titre = IconLabel(icones["logo"], "ArchLate", 20, "Titre")
+        self.label_titre = IconLabel(icones["logo"], "ArkGlyph", 20, "Titre")
         self.icon_titre = Icon(icones["logo"], 20)
 
         self.btn_show_hide = creation_btn_simple("hide", True)

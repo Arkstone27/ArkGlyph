@@ -100,7 +100,7 @@ def preparation_page(page_visio):
 
 def creer_dossier(nom_lot, signaux):
     nom_dossier = nom_lot.replace("/", "~").replace(":", "#")
-    chemin_lot = Path("Lots_ArchLate") / nom_dossier
+    chemin_lot = Path("Lots_ArkGlyph") / nom_dossier
     if chemin_lot.is_dir():
         return True, ""
     signaux.status.emit(f"Création du dossier : {nom_dossier}...", 0)
@@ -116,7 +116,7 @@ def save_img(page_visio, chemin_lot, n_page):
         info_img.value.save_as(chemin_fichier.resolve())
 
 def creation_dossier_lots():
-    chemin_lots = Path("Lots_ArchLate")
+    chemin_lots = Path("Lots_ArkGlyph")
 
     if chemin_lots.is_dir() :
         return

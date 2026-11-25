@@ -130,7 +130,7 @@ def creation_json(chemin_lot: Path, url_lot: str, width_max=None, height_max=Non
     with open(chemin_lot / "data.json", "w", encoding="utf-8") as fichier:
         json.dump(data, fichier, indent=4, ensure_ascii=False)
 
-chemin_lots = Path("Lots_ArchLate")
+chemin_lots = Path("Lots_ArkGlyph")
 
 
 if __name__ == '__main__':

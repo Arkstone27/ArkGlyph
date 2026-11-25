@@ -252,7 +252,7 @@ class DefLot(QFrame):
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         # Widgets
-        self.label_nom = QLabel(f"Archlate/{lot.nom}")
+        self.label_nom = QLabel(f"ArkGlyph/{lot.nom}")
         self.label_nom.setObjectName("titre")
 
         self.label_infos = IconLabels([icones["time"], f"{clean_date(lot.date_download)} ∙", icones["paper"], f"{lot.nb_pages} pages ∙", icones["link"], f"<a href='{lot.url}' style='color: #bcb2ff' >{clean_url(lot.url)}</a>"],

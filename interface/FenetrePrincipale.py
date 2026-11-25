@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QApplication, QMainWindow, QHBoxLayout, QFrame
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 import sys
 
 from interface.SideBarOutils import SideBarOutils
@@ -13,7 +14,7 @@ class FenetrePrincipal(QMainWindow):
         super().__init__()
 
         # Propriétés de la fenêtre
-        self.setWindowTitle("ArchLate")
+        self.setWindowTitle("ArkGlyph")
         self.setGeometry(200,200,1024,768)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint) # On retire les bords
         self.setAttribute(Qt.WA_TranslucentBackground, True)
@@ -45,6 +46,7 @@ def chargement_app():
 
     # Style
     chargement_fonts()
+    app.setFont(QFont("JetBrains Mono", 10))
     application_palette()
 
     with open("style.qss", "r") as f:

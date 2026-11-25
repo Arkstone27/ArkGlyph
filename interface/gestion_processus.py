@@ -177,13 +177,14 @@ def coupure_intelligente(ligne, indice_max):
     while ligne[indice_max] != " " or indice_max < 5:
         indice_max -= 1
     return indice_max
+
 def clean_infos(infos: str):
     new_infos = " "
     lignes = infos.split("\n")
     
     for ligne in lignes:
-        while len(ligne) > 35:
-            indice_coupure = coupure_intelligente(ligne, 35)
+        while len(ligne) > 25:
+            indice_coupure = coupure_intelligente(ligne, 25)
             new_infos += ligne[:indice_coupure+1]
             new_infos += "\n"
             ligne = ligne[indice_coupure+1:]
