@@ -5,6 +5,8 @@ from ArkMage.rotation import rotation_fast
 from ArkMage.scaling import meilleur_winsorisation
 from ArkMage.stats_data import Stats_Data
 
+from pathlib import Path
+
 import plotly.graph_objects as go
 from time import perf_counter
 
@@ -52,46 +54,37 @@ def afficher_histogramme(histogramme):
         y=histogramme,
         marker_color=couleurs
     )])
-    figure.write_html("graphiques\\histogramme_vertical.html")
+    figure.write_html("histo.html")
+
 @njit
-def somme_erreur(histogramme):
-    h = histogramme.shape[0]
-
-    erreur = 0
-    for indice in range(1, h):
-        erreur += abs(histogramme[indice, 0, 0] - histogramme[indice-1, 0, 0])
-    return erreur
-
-def calcul_erreur_orientation(data):
+def calcul_variance(data):
     histogramme = histogramme_vertical_fast(data)
-    histogramme = meilleur_winsorisation(Stats_Data(histogramme[:, np.newaxis, np.newaxis].astype(np.float32, copy=False)))
 
-    return somme_erreur(histogramme)
+    return np.var(histogramme)
 
-def find_best_rotation(data, nb_test=10):
-    angle, ecart = 0.0, 2
-    erreur_angle = calcul_erreur_orientation(data)
+@njit
+def find_best_rotation(data, angle_max=10.0):
+    angle_best, variance_max = 0.0, 0.0
+    angle = - angle_max
 
-    for _ in range(nb_test):
-        angle_1 = angle + ecart
-        erreur_1 = calcul_erreur_orientation(rotation_fast(data, angle_1))
+    while angle < angle_max:
+        variance = calcul_variance(rotation_fast(data, angle))
 
-        if erreur_1 > erreur_angle:
-            angle, erreur_angle = angle_1, erreur_1
-        else:
-            angle_2 = angle - ecart
-            erreur_2 = calcul_erreur_orientation(rotation_fast(data, angle_2))
+        if variance > variance_max:
+            variance_max = variance
+            angle_best = angle
 
-            if erreur_2 > erreur_angle:
-                angle, erreur_angle = angle_2, erreur_2
-        ecart /= 2
+        angle += 0.2
 
-    return angle
+    return angle_best
 
 def correction_rotation(data, data_fullsize):
     angle = find_best_rotation(data)
+    data = rotation_fast(data_fullsize, angle)
+    histogramme = histogramme_vertical_fast(data)
+    afficher_histogramme(histogramme)
 
-    return rotation_fast(data_fullsize, angle)
+    return data
 
 @njit
 def coupure_optimale(data):
@@ -116,6 +109,7 @@ def coupure_img(data, data_analyse): # Si l'image a 2 pages on coupe au milieu a
 
 def preparation_img(chemin):
     pixels = ouvrir_image(chemin)
+    pixels.data = pixels.data[80:-80, :, :]
     debut = perf_counter()
     w, h, n = pixels.data.shape
     pixels_analyse =  conversion_gris(resize_simple(pixels, *conservation_ratio(500, 0, pixels))) # La taille de l'image est réduite
@@ -128,9 +122,8 @@ def preparation_img(chemin):
     pixels = Pixels(data, pixels.mode_couleur)
     print(perf_counter() - debut)
     pixels.show()
-    # pixels.sauvegarde(chemin.replace(".jpg", ".jxl"))
+    # pixels.sauvegarde(chemin)
 
 
 if __name__ == '__main__':
-    preparation_img("")
     preparation_img("")
