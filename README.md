@@ -30,6 +30,9 @@ ArkGlyph/
 This project is currently intended for French-speaking users.
 Ongoing work to standardize the pages of an archive collection. Meaning: Correction of rotation, scale, and translation.
 
+
+![Loading error...](https://github.com/Arkstone27/ArkGlyph/blob/master/img_interface.jpg "App's interface")
+
 ## Documentation
 
 _Coming..._
